@@ -1,0 +1,218 @@
+{
+  "info": {
+    "name": "SFMC Custom Activity",
+    "_postman_id": "f6bb0c3e-0c82-4c92-b4ac-77b5f0b1b4c2",
+    "description": "Complete request collection for the Journey Builder custom activity server.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Static Assets",
+      "item": [
+        {
+          "name": "Load index.html",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/index.html",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "index.html"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Fetch config.json",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/config.json",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "config.json"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Lifecycle Hooks",
+      "item": [
+        {
+          "name": "Save",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meta\": {\n    \"journeyName\": \"Sample Journey\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/save",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "save"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Publish",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meta\": {\n    \"version\": \"1.0\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "publish"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Validate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meta\": {\n    \"requestedBy\": \"Postman\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "validate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Stop",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meta\": {\n    \"reason\": \"Manual stop for testing\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/stop",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stop"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Execution",
+      "item": [
+        {
+          "name": "ExecuteV2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inArguments\": [\n    {\n      \"campaignName\": \"Sample Campaign\",\n      \"tiny\": true,\n      \"PE_ID\": \"PE123\",\n      \"TEMPLATE_ID\": \"TMP456\",\n      \"TELEMARKETER_ID\": \"TEL789\",\n      \"message\": \"Thank you for your purchase!\"\n    }\n  ],\n  \"outArguments\": [],\n  \"activityObjectID\": \"00000000-0000-0000-0000-000000000000\",\n  \"journeyId\": \"11111111-1111-1111-1111-111111111111\",\n  \"activityId\": \"22222222-2222-2222-2222-222222222222\",\n  \"definitionInstanceId\": \"33333333-3333-3333-3333-333333333333\",\n  \"activityInstanceId\": \"44444444-4444-4444-4444-444444444444\",\n  \"keyValue\": \"CONTACT_KEY\",\n  \"mode\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/executeV2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "executeV2"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001",
+      "type": "string"
+    }
+  ]
+}
