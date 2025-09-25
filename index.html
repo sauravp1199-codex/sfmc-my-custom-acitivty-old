@@ -6,17 +6,139 @@
     <meta name="viewport" content="width=device-width">
     <title>Comsense Custom Code</title>
     <link rel="stylesheet" type="text/css" href="assets/styles/salesforce-lightning-design-system.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --activity-bg: linear-gradient(135deg, #0d1b2a 0%, #1b263b 40%, #415a77 100%);
+            --card-bg: #f8fbff;
+            --card-border: rgba(65, 90, 119, 0.18);
+            --accent-color: #1b96ff;
+            --accent-dark: #0f6abf;
+            --text-muted: #4b5f7a;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            background: var(--activity-bg);
+            font-family: "Source Sans Pro", "Salesforce Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+                sans-serif;
+            color: #081325;
+        }
+
+        .hero-banner {
+            width: 100%;
+            max-height: 120px;
+            object-fit: cover;
+            box-shadow: 0 8px 24px rgba(8, 19, 37, 0.25);
+        }
+
+        .activity-wrapper {
+            width: min(720px, 90vw);
+            margin-top: -40px;
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 24px 45px rgba(8, 19, 37, 0.2);
+            padding: 3rem clamp(1.5rem, 4vw, 3rem);
+            border: 1px solid var(--card-border);
+        }
+
+        .activity-wrapper h2 {
+            margin-top: 0;
+        }
+
+        .section-title {
+            font-size: clamp(1.5rem, 2.8vw, 2rem);
+            font-weight: 700;
+            color: #0b2545;
+            letter-spacing: 0.01em;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        hr {
+            border: none;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(27, 150, 255, 0.4), rgba(65, 90, 119, 0));
+            margin-bottom: 0.5rem;
+        }
+
+        .form-field {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.35rem;
+        }
+
+        .form-field label {
+            font-weight: 600;
+            color: var(--text-muted);
+            letter-spacing: 0.02em;
+        }
+
+        .form-field input.slds-form-element__control,
+        .form-field select.slds-select {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid rgba(11, 37, 69, 0.15);
+            padding: 0.8rem 1rem;
+            background-color: white;
+            font-size: 1rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        .form-field input.slds-form-element__control:focus,
+        .form-field select.slds-select:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 4px rgba(27, 150, 255, 0.2);
+            outline: none;
+            transform: translateY(-1px);
+        }
+
+        .helper-text {
+            font-size: 0.875rem;
+            color: rgba(11, 37, 69, 0.65);
+        }
+
+        @media (max-width: 540px) {
+            .activity-wrapper {
+                padding: 2.25rem 1.5rem;
+            }
+
+            .section-title {
+                text-align: center;
+            }
+
+            body {
+                justify-content: flex-start;
+            }
+        }
+    </style>
 
 </head>
 
 <body>
-    <img style="top: 0; background-color: #666;"
-        src="assets/images/themes/oneSalesforce/banner-group-unlisted-default.png" />
-    <div class="slds-form slds-m-around--medium">
-        <h2 class="slds-page-header__title slds-truncate">
+    <img class="hero-banner" src="assets/images/themes/oneSalesforce/banner-group-unlisted-default.png" />
+    <div class="slds-form slds-m-around--medium activity-wrapper">
+        <h2 class="slds-page-header__title slds-truncate section-title">
             </h1>
             <div id="step1" class="step">
-                <h2>SMS Send API:</h2>
+                <h2 class="section-title">SMS Send API:</h2>
                 <hr>
 
                 <!-- <div>
@@ -25,7 +147,7 @@
                         value="">
                 </div> -->
 
-                <div>
+                <div class="form-field">
                     <div><label for="campaignName">Campaign Name:</label></div>
                     <input class="slds-form-element__control" id="campaignName" type="text" name="campaignName"
                         value="">
@@ -34,7 +156,7 @@
                     <div><label for="tiny">Tiny:</label></div>
                     <input class="slds-form-element__control" id="tiny" type="text" name="tiny" value="">
                 </div> -->
-                <div>
+                <div class="form-field">
                     <div><label for="tiny">Tiny:</label></div>
                     <select class="slds-select" id="tiny" name="tiny">
                         <option value="1">1</option>
@@ -42,20 +164,20 @@
                     </select>
                 </div>
 
-                <div>
+                <div class="form-field">
                     <div><label for="PE_ID">PE ID:</label></div>
                     <input class="slds-form-element__control" id="PE_ID" type="text" name="PE_ID" value="">
                 </div>
-                <div>
+                <div class="form-field">
                     <div><label for="TEMPLATE_ID">TEMPLATE ID:</label></div>
                     <input class="slds-form-element__control" id="TEMPLATE_ID" type="text" name="TEMPLATE_ID" value="">
                 </div>
-                <div>
+                <div class="form-field">
                     <div><label for="TELEMARKETER_ID">TELEMARKETER ID:</label></div>
                     <input class="slds-form-element__control" id="TELEMARKETER_ID" type="text" name="TELEMARKETER_ID"
                         value="">
                 </div>
-                <div>
+                <div class="form-field">
                     <div><label for="message">Message:</label></div>
                     <input class="slds-form-element__control" id="message" type="text" name="message" value="">
                 </div>
