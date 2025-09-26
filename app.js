@@ -19,6 +19,7 @@ const { buildDigoPayload } = require('./lib/digo-payload');
 const { sendPayloadWithRetry, ProviderRequestError } = require('./lib/digo-client');
 
 const app = express();
+app.set('trust proxy', true);
 
 const designSystemAssetsPath = path.join(
   __dirname,

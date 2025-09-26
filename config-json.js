@@ -12,10 +12,29 @@ function resolveBaseUrl(req) {
   if (process.env.PUBLIC_BASE_URL) {
     return process.env.PUBLIC_BASE_URL;
   }
-  if (!req || !req.protocol || !req.get) {
+
+  if (!req || typeof req.get !== 'function') {
     return '';
   }
-  return `${req.protocol}://${req.get('host')}`;
+
+  const forwardedProto = req.get('x-forwarded-proto');
+  let protocol = forwardedProto ? forwardedProto.split(',')[0].trim() : '';
+
+  if (!protocol && req.protocol) {
+    protocol = req.protocol;
+  }
+
+  if (!protocol) {
+    return '';
+  }
+
+  const host = req.get('host');
+
+  if (!host) {
+    return '';
+  }
+
+  return `${protocol}://${host}`;
 }
 
 module.exports = function configJSON(req) {
