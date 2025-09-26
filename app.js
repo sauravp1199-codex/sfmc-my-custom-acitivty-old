@@ -18,6 +18,11 @@ const app = express();
 const configJSON = require('./config-json');
 const uuid = require('uuid');
 
+const designSystemAssetsPath = path.join(
+  __dirname,
+  'node_modules/@salesforce-ux/design-system/assets'
+);
+
 let logger = (label, item) => {
   const debug = true
   if (debug) {
@@ -30,6 +35,7 @@ let logger = (label, item) => {
 app.set('port', process.env.PORT || 3001);
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'dist')))
+app.use('/assets', express.static(designSystemAssetsPath));
 
 app.get('/', (req, res) => {
   return res.sendFile(path.join(__dirname, 'index.html'))
@@ -37,6 +43,14 @@ app.get('/', (req, res) => {
 
 app.get('/index.html', (req, res) => {
   return res.sendFile(path.join(__dirname, 'index.html'))
+})
+
+app.get('/main.js', (req, res) => {
+  return res.sendFile(path.join(__dirname, 'main.js'))
+})
+
+app.get('/main.js.map', (req, res) => {
+  return res.sendFile(path.join(__dirname, 'main.js.map'))
 })
 
 // setup config.json route
