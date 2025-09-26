@@ -12,7 +12,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
 const configJSON = require('./config-json');
-const uuid = require('uuid');
+const { v4: uuidv4 } = require('uuid');
 const logger = require('./lib/logger');
 const { ValidationError, validateExecuteRequest } = require('./lib/activity-validation');
 const { buildDigoPayload } = require('./lib/digo-payload');
@@ -34,7 +34,7 @@ app.use('/images', express.static(path.join(__dirname, 'images')));
 
 // Attach a correlation id for every request so that logs are traceable.
 app.use((req, res, next) => {
-  const correlationId = req.headers['x-correlation-id'] || uuid.v4();
+  const correlationId = req.headers['x-correlation-id'] || uuidv4();
   req.correlationId = correlationId;
   res.set('X-Correlation-Id', correlationId);
   next();
