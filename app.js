@@ -19,6 +19,13 @@ const { buildDigoPayload } = require('./lib/digo-payload');
 const { sendPayloadWithRetry, ProviderRequestError } = require('./lib/digo-client');
 
 const app = express();
+// Honour reverse proxy headers (e.g. nginx/Heroku) so req.protocol reflects
+// the external scheme when generating config.json URLs.
+if (process.env.TRUST_PROXY !== 'false') {
+  const trustProxyValue = process.env.TRUST_PROXY ? Number(process.env.TRUST_PROXY) || process.env.TRUST_PROXY : 1;
+  app.set('trust proxy', trustProxyValue);
+}
+
 
 const designSystemAssetsPath = path.join(
   __dirname,

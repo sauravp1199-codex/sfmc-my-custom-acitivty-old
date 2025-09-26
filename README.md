@@ -41,6 +41,8 @@ A Postman collection covering every HTTP endpoint exposed by `app.js` is availab
 | `DIGO_ORIGINATOR` | (Optional) Originator string for the SMS payload. Defaults to `TACMPN`. |
 | `DIGO_STUB_MODE` | When set to `true`, skips the outbound call and echoes the payload for integration testing. |
 
+| `TRUST_PROXY` | (Optional) Controls Express' `trust proxy` setting. Defaults to `1` so `X-Forwarded-*` headers from load balancers are honoured. Set to `false` to disable. |
+
 ### Validating the execute payload
 
 The Journey Builder canvas must submit an `execute` payload containing the following structure in `inArguments[0]`:

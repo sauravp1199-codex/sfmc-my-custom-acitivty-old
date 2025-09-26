@@ -12,10 +12,31 @@ function resolveBaseUrl(req) {
   if (process.env.PUBLIC_BASE_URL) {
     return process.env.PUBLIC_BASE_URL;
   }
-  if (!req || !req.protocol || !req.get) {
+  if (!req || typeof req !== 'object') {
     return '';
   }
-  return `${req.protocol}://${req.get('host')}`;
+
+  const getHeader = (name) => {
+    if (!req.get) {
+      return undefined;
+    }
+    return req.get(name);
+  };
+
+  // Honour reverse proxy headers so the generated config.json uses the
+  // externally facing protocol/host rather than the internal container
+  // address that Journey Builder cannot resolve.
+  const forwardedProto = getHeader('x-forwarded-proto');
+  const forwardedHost = getHeader('x-forwarded-host');
+
+  const protocol = forwardedProto ? forwardedProto.split(',')[0] : req.protocol;
+  const host = forwardedHost || (req.get ? req.get('host') : undefined);
+
+  if (!protocol || !host) {
+    return '';
+  }
+
+  return `${protocol}://${host}`;
 }
 
 module.exports = function configJSON(req) {
