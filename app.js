@@ -213,15 +213,11 @@ app.post('/executeV2', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3002;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
-
+const PORT = process.env.PORT || 3001;
 app.get('/health', (req, res) => {
   res.send('Server is up and running');
 });
 
-app.listen(app.get('port'), () => {
-  console.log(`Express is running at localhost: ${app.get('port')}`)
-})
+app.listen(PORT, () => {
+  console.log(`Express is running at localhost: ${PORT}`)
+});
