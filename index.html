@@ -133,17 +133,18 @@
 <body>
     <img class="hero-banner" src="assets/images/themes/oneSalesforce/banner-group-unlisted-default.png" />
     <div class="slds-form slds-m-around--medium activity-wrapper">
-        <h2 class="slds-page-header__title slds-truncate section-title">
-            </h1>
+        <h2 class="slds-page-header__title slds-truncate section-title"></h2>
             <div id="step1" class="step">
                 <h2 class="section-title">SMS Send API:</h2>
                 <hr>
 
-                <!-- <div>
+                <div class="form-field">
                     <div><label for="transactionID">Transaction ID:</label></div>
                     <input class="slds-form-element__control" id="transactionID" type="text" name="transactionID"
-                        value="">
-                </div> -->
+                        placeholder="Auto-generated if left blank">
+                    <span class="helper-text">Leave blank to automatically generate a unique identifier when the
+                        activity is saved.</span>
+                </div>
 
                 <div class="form-field">
                     <div><label for="campaignName">Campaign Name:</label></div>
@@ -179,6 +180,75 @@
                     <div><label for="message">Message:</label></div>
                     <input class="slds-form-element__control" id="message" type="text" name="message" value="">
                 </div>
+
+                <div id="form-error-banner" class="slds-notify slds-notify_alert slds-theme_alert-texture"
+                    style="display:none; margin-top:1rem;" role="alert">
+                    <span class="slds-assistive-text">Error</span>
+                    <span class="slds-icon_container slds-icon-utility-error" title="Error">
+                        <svg class="slds-icon slds-icon_x-small" aria-hidden="true">
+                            <use xlink:href="assets/icons/utility-sprite/svg/symbols.svg#error"></use>
+                        </svg>
+                    </span>
+                    <h2 id="form-error-text" style="margin:0 0 0 0.5rem; font-weight:600;"></h2>
+                </div>
+
+                <script type="text/javascript">
+                    (function () {
+                        const transactionInput = document.getElementById('transactionID');
+                        const errorBanner = document.getElementById('form-error-banner');
+                        const errorText = document.getElementById('form-error-text');
+
+                        function hideError() {
+                            errorBanner.style.display = 'none';
+                            errorText.textContent = '';
+                        }
+
+                        function showError(message) {
+                            errorText.textContent = message;
+                            errorBanner.style.display = 'flex';
+                        }
+
+                        function ensureTransactionId() {
+                            if (!transactionInput.value) {
+                                transactionInput.value = `txn-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+                            }
+                        }
+
+                        if (document.readyState === 'loading') {
+                            document.addEventListener('DOMContentLoaded', () => {
+                                ensureTransactionId();
+                                hideError();
+                            });
+                        } else {
+                            ensureTransactionId();
+                            hideError();
+                        }
+
+                        document.querySelectorAll('#campaignName, #tiny, #PE_ID, #TEMPLATE_ID, #TELEMARKETER_ID, #message')
+                            .forEach((input) => {
+                                input.addEventListener('blur', hideError);
+                                input.addEventListener('input', hideError);
+                            });
+
+                        // Validate required fields before SFMC reads them so that the user gets feedback early.
+                        document.getElementById('step1').addEventListener('focusout', (event) => {
+                            const target = event.target;
+                            if (target && target.id === 'TEMPLATE_ID' && !target.value.trim()) {
+                                showError('Template ID is required before the activity can be saved.');
+                            }
+                        });
+
+                        // In case the user clears the field manually we will re-seed it on blur.
+                        transactionInput.addEventListener('blur', ensureTransactionId);
+
+                        // Expose helper for integration tests (optional)
+                        window.__activityForm = {
+                            ensureTransactionId,
+                            showError,
+                            hideError
+                        };
+                    })();
+                </script>
 
                 <script type="text/javascript" src="main.js"></script>
 </body>
