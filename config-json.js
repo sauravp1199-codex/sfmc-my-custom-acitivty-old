@@ -14,14 +14,15 @@ module.exports = function configJSON(req) {
     workflowApiVersion: '1.1',
     // metaData points 
     metaData: {
-      icon: 'images/iconSmall.png',
+      icon: 'images/icon.svg',
+      iconSmall: 'images/icon.svg',
       category: 'message'
     },
     type: 'REST',
     lang: {
       'en-US': {
-        name: 'Custom Code Activity',
-        description: 'Makes a POST call with payload to a specific URL'
+        name: 'SMS Send Activity',
+        description: 'Collects SMS send parameters and delivers them to the execution endpoint'
       }
     },
     // Contains information sent to the activity each time it executes. 
@@ -43,7 +44,7 @@ module.exports = function configJSON(req) {
         concurrentRequests: 5,
         // url:'https://customactivityv2.herokuapp.com/execute',
         // url:'http://localhost:3001/executeV2',
-        url:'https://sfmc.comsensetechnologies.com/executeV2',
+        url: 'https://sfmc.comsensetechnologies.com/executeV2',
       },
     },
 
@@ -95,17 +96,41 @@ module.exports = function configJSON(req) {
       arguments: {
         execute: {
           inArguments: [
-            { 
-              urlString: {
+            {
+              campaignName: {
                 dataType: 'Text',
                 isNullable: 'False',
-                direction: 'out',
+                direction: 'in',
                 access: 'visible'
               },
-              payload: {
+              tiny: {
                 dataType: 'Text',
-                isNullable: 'True',
-                direction: 'out',
+                isNullable: 'False',
+                direction: 'in',
+                access: 'visible'
+              },
+              PE_ID: {
+                dataType: 'Text',
+                isNullable: 'False',
+                direction: 'in',
+                access: 'visible'
+              },
+              TEMPLATE_ID: {
+                dataType: 'Text',
+                isNullable: 'False',
+                direction: 'in',
+                access: 'visible'
+              },
+              TELEMARKETER_ID: {
+                dataType: 'Text',
+                isNullable: 'False',
+                direction: 'in',
+                access: 'visible'
+              },
+              message: {
+                dataType: 'Text',
+                isNullable: 'False',
+                direction: 'in',
                 access: 'visible'
               }
             }

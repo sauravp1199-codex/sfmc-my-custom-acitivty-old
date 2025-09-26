@@ -21,100 +21,187 @@ const isDev = location.hostname === 'localhost' || location.hostname === '127.0.
 // We'll store the activity on this variable when we receive it
 let activity = {};
 
+const FIELD_DEFINITIONS = [
+  { id: 'campaignName', label: 'Campaign Name', required: true },
+  { id: 'tiny', label: 'Tiny', required: true },
+  { id: 'PE_ID', label: 'PE ID', required: true },
+  { id: 'TEMPLATE_ID', label: 'Template ID', required: true },
+  { id: 'TELEMARKETER_ID', label: 'Telemarketer ID', required: true },
+  { id: 'message', label: 'Message', required: true }
+];
+
 // Wait for the document to load before we do anything
 document.addEventListener('DOMContentLoaded', function main() {
-  // setup our ui event handlers
-  document.getElementById('url').addEventListener('keyup', onFormEntry)
+  FIELD_DEFINITIONS.forEach(({ id }) => {
+    const field = document.getElementById(id);
+
+    if (!field) {
+      console.warn(`Field with id "${id}" is missing from the DOM.`);
+      return;
+    }
+
+    const eventName = field.tagName === 'SELECT' ? 'change' : 'input';
+    field.addEventListener(eventName, () => {
+      clearFieldError(id);
+      onFormEntry({ target: field });
+    });
+  });
 
   if (isDev) {
-    console.log("DEV MODE ENABLED - TRIGGERING MOCK JB -> CUSTOM ACTIVITY SIGNAL")
-    setupExampleTestHarness()
+    console.log('DEV MODE ENABLED - TRIGGERING MOCK JB -> CUSTOM ACTIVITY SIGNAL');
+    setupExampleTestHarness();
   }
-
 
   // Bind the initActivity event...
   // Journey Builder will respond with 'initActivity' after it receives the "ready" signal
   connection.on('initActivity', onInitActivity);
-  connection.on('clickedNext', onDoneButtonClick)
+  connection.on('clickedNext', onDoneButtonClick);
 
   // We're all set! let's signal Journey Builder
   // that we're ready to receive the activity payload...
   // Tell the parent iFrame that we are ready.
   connection.trigger('ready');
-  console.log('Journey Builder has been signaled we may receive payload...')
+  console.log('Journey Builder has been signaled we may receive payload...');
 });
 
 // this function is triggered by Journey Builder via Postmonger.
 // Journey Builder will send us a copy of the activity here
 function onInitActivity(payload) {
-
   // Set the activity object from this payload. We'll refer to this object as we
   // modify it before saving.
-  activity = payload; 
-  console.log(activity)
+  activity = payload || {};
+  console.log(activity);
 
-  let inArguments; 
-
-  if (
-    activity.arguments && 
-    activity.arguments.execute && 
-    activity.arguments.execute.inArguments &&
+  const inArguments = activity.arguments &&
+    activity.arguments.execute &&
+    Array.isArray(activity.arguments.execute.inArguments) &&
     activity.arguments.execute.inArguments.length > 0
-  ) {
-    inArguments = activity.arguments.execute.inArguments
-  } else {
-    inArguments = []
+      ? activity.arguments.execute.inArguments
+      : [];
+
+  const mergedArguments = Object.assign({}, ...inArguments);
+
+  FIELD_DEFINITIONS.forEach(({ id }) => {
+    if (Object.prototype.hasOwnProperty.call(mergedArguments, id)) {
+      setFieldValue(id, mergedArguments[id]);
+      clearFieldError(id);
+    }
+  });
+
+  if (activity.metaData && activity.metaData.isConfigured) {
+    return;
   }
 
-  let urlStringObj = inArguments.find((obj) => obj.urlString)
-  let payloadStringObj = inArguments.find((obj) => obj.payload)
+  const hasAllValues = FIELD_DEFINITIONS.every(({ id }) => {
+    const value = mergedArguments[id];
+    return value !== undefined && value !== null && String(value).trim() !== '';
+  });
 
-  if (urlStringObj) {
-    prePopulateInput('url', urlStringObj.urlString)
+  if (hasAllValues) {
+    activity.metaData = activity.metaData || {};
+    activity.metaData.isConfigured = true;
   }
-
-  if (payloadStringObj) {
-    prePopulateInput('payload', JSON.stringify(payloadStringObj.payload, null, 4))
-  }
-
 }
 
-function prePopulateInput(inputFieldId, inputValue) {
-  let inputField = document.getElementById(inputFieldId)
-  inputField.value = inputValue
+function setFieldValue(id, value) {
+  const field = document.getElementById(id);
+
+  if (!field) {
+    return;
+  }
+
+  if (field.tagName === 'SELECT') {
+    field.value = value !== undefined && value !== null ? String(value) : field.value;
+  } else {
+    field.value = value !== undefined && value !== null ? String(value) : '';
+  }
+}
+
+function getFieldContainer(id) {
+  return document.querySelector(`[data-field="${id}"]`);
+}
+
+function showFieldError(id, message) {
+  const container = getFieldContainer(id);
+
+  if (!container) {
+    return;
+  }
+
+  container.classList.add('slds-has-error');
+
+  const helper = container.querySelector('.error-text');
+
+  if (helper) {
+    helper.textContent = message;
+  }
+}
+
+function clearFieldError(id) {
+  const container = getFieldContainer(id);
+
+  if (!container) {
+    return;
+  }
+
+  container.classList.remove('slds-has-error');
+
+  const helper = container.querySelector('.error-text');
+
+  if (helper) {
+    helper.textContent = '';
+  }
+}
+
+function getFieldValue(field) {
+  if (!field) {
+    return '';
+  }
+
+  if (field.tagName === 'SELECT') {
+    return field.value;
+  }
+
+  return typeof field.value === 'string' ? field.value.trim() : field.value;
 }
 
 function onDoneButtonClick() {
-  urlString = document.getElementById('url').value
-  
-  if (urlString.length > 0) {
-    // we must set metaData.isConfigured in order to tell JB that this activity
-    // is ready for activation
-    activity.metaData.isConfigured = true; 
+  const fieldPayload = {};
+  let hasErrors = false;
 
-    payloadValue = document.getElementById('payload').value
+  FIELD_DEFINITIONS.forEach(({ id, label, required }) => {
+    const field = document.getElementById(id);
 
-    if (payloadValue) {
-      try {
-        payload = JSON.parse(payloadValue)
-      } catch {
-        document.getElementById('payload-field').classList.add('slds-has-error')
-        document.getElementById('form-error-payload').style.display = null
-
-      }
-      
-      activity.arguments.execute.inArguments = [ {urlString, payload } ]  
-    } else {
-      activity.arguments.execute.inArguments = [ {urlString} ] 
+    if (!field) {
+      return;
     }
-    
-    connection.trigger('updateActivity', activity)
-    console.log(`Activity has been updated. Activity: ${JSON.stringify(activity)}`)
 
-  } else {
-    document.getElementById('url-field').classList.add('slds-has-error')
-    document.getElementById('form-error-url').style.display = null
+    const value = getFieldValue(field);
+
+    if (required && (value === undefined || value === null || value === '')) {
+      showFieldError(id, `${label} is required.`);
+      hasErrors = true;
+      return;
+    }
+
+    fieldPayload[id] = field.tagName === 'SELECT' ? value : value;
+  });
+
+  if (hasErrors) {
+    return;
   }
+
+  // we must set metaData.isConfigured in order to tell JB that this activity
+  // is ready for activation
+  activity.metaData = activity.metaData || {};
+  activity.metaData.isConfigured = true;
+
+  activity.arguments = activity.arguments || {};
+  activity.arguments.execute = activity.arguments.execute || {};
+  activity.arguments.execute.inArguments = [fieldPayload];
+
+  connection.trigger('updateActivity', activity);
+  console.log(`Activity has been updated. Activity: ${JSON.stringify(activity)}`);
 }
 
 function onCancelButtonClick() {
@@ -128,11 +215,16 @@ function onCancelButtonClick() {
 
 // HANDLER TO DISABLE "DONE" BUTTON - SAMPLE BELOW
 function onFormEntry(e) {
-  if (e.target.value.length > 0) {
+  if (!e || !e.target) {
+    return;
+  }
+
+  const value = getFieldValue(e.target);
+
+  if (value && value.length > 0) {
     // let journey builder know the activity has changes
     connection.trigger('setActivityDirtyState', true);
-
-  } 
+  }
 }
 
 
@@ -180,10 +272,14 @@ function setupExampleTestHarness() {
             contactKey: "{{Context.ContactKey}}",
             execute: {
                 inArguments: [
-                  // SAMPLE
-                  // {
-                  //   payload: { foo: "bar"}
-                  // }
+                  {
+                    campaignName: 'Sample Campaign',
+                    tiny: '1',
+                    PE_ID: '12345',
+                    TEMPLATE_ID: '67890',
+                    TELEMARKETER_ID: 'TM-001',
+                    message: 'Sample SMS body'
+                  }
                 ],
                 outArguments: []
             },

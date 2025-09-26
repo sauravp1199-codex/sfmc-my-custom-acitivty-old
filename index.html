@@ -102,6 +102,18 @@
             transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
         }
 
+        .form-field.slds-has-error input.slds-form-element__control,
+        .form-field.slds-has-error select.slds-select {
+            border-color: #ba0517;
+            box-shadow: 0 0 0 1px #ba0517;
+        }
+
+        .form-field .error-text {
+            color: #ba0517;
+            font-size: 0.8125rem;
+            min-height: 0.8125rem;
+        }
+
         .form-field input.slds-form-element__control:focus,
         .form-field select.slds-select:focus {
             border-color: var(--accent-color);
@@ -135,8 +147,7 @@
 <body>
     <img class="hero-banner" src="assets/images/themes/oneSalesforce/banner-group-unlisted-default.png" />
     <div class="slds-form slds-m-around--medium activity-wrapper">
-        <h2 class="slds-page-header__title slds-truncate section-title">
-            </h1>
+        <h2 class="slds-page-header__title slds-truncate section-title"></h2>
             <div id="step1" class="step">
                 <h2 class="section-title">SMS Send API:</h2>
                 <hr>
@@ -147,39 +158,45 @@
                         value="">
                 </div> -->
 
-                <div class="form-field">
+                <div class="form-field" data-field="campaignName">
                     <div><label for="campaignName">Campaign Name:</label></div>
                     <input class="slds-form-element__control" id="campaignName" type="text" name="campaignName"
                         value="">
+                    <p class="slds-form-element__help error-text"></p>
                 </div>
                 <!-- <div>
                     <div><label for="tiny">Tiny:</label></div>
                     <input class="slds-form-element__control" id="tiny" type="text" name="tiny" value="">
                 </div> -->
-                <div class="form-field">
+                <div class="form-field" data-field="tiny">
                     <div><label for="tiny">Tiny:</label></div>
                     <select class="slds-select" id="tiny" name="tiny">
                         <option value="1">1</option>
                         <option value="0">0</option>
                     </select>
+                    <p class="slds-form-element__help error-text"></p>
                 </div>
 
-                <div class="form-field">
+                <div class="form-field" data-field="PE_ID">
                     <div><label for="PE_ID">PE ID:</label></div>
                     <input class="slds-form-element__control" id="PE_ID" type="text" name="PE_ID" value="">
+                    <p class="slds-form-element__help error-text"></p>
                 </div>
-                <div class="form-field">
+                <div class="form-field" data-field="TEMPLATE_ID">
                     <div><label for="TEMPLATE_ID">TEMPLATE ID:</label></div>
                     <input class="slds-form-element__control" id="TEMPLATE_ID" type="text" name="TEMPLATE_ID" value="">
+                    <p class="slds-form-element__help error-text"></p>
                 </div>
-                <div class="form-field">
+                <div class="form-field" data-field="TELEMARKETER_ID">
                     <div><label for="TELEMARKETER_ID">TELEMARKETER ID:</label></div>
                     <input class="slds-form-element__control" id="TELEMARKETER_ID" type="text" name="TELEMARKETER_ID"
                         value="">
+                    <p class="slds-form-element__help error-text"></p>
                 </div>
-                <div class="form-field">
+                <div class="form-field" data-field="message">
                     <div><label for="message">Message:</label></div>
                     <input class="slds-form-element__control" id="message" type="text" name="message" value="">
+                    <p class="slds-form-element__help error-text"></p>
                 </div>
 
                 <script type="text/javascript" src="main.js"></script>
