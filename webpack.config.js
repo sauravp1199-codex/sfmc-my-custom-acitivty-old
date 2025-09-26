@@ -9,7 +9,7 @@ module.exports = (env, argv) => {
         devtool: 'cheap-source-map',
         entry: path.resolve(__dirname, './src/index.js'),
         output: {
-            path: path.resolve(__dirname, 'dist'),
+            path: path.resolve(__dirname),
             filename: 'main.js'
         },
         // REVISIT - it should copy SLDS design assets into /dist, but is erroring. Doing it manually for now
