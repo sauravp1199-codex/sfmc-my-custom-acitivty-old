@@ -31,6 +31,7 @@
     "jekyll": "^3.0.0-beta1",
     "postmonger": "0.0.16",
     "uuid": "^9.0.1"
+
   },
   "devDependencies": {
     "babel-core": "^4.7.16",
