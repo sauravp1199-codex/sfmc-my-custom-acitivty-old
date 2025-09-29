@@ -85,42 +85,6 @@ module.exports = function configJSON(req) {
         execute: {
           inArguments: [
             {
-              transactionID: {
-                dataType: 'Text',
-                isNullable: 'True',
-                direction: 'in',
-                access: 'visible'
-              },
-              campaignName: {
-                dataType: 'Text',
-                isNullable: 'False',
-                direction: 'in',
-                access: 'visible'
-              },
-              tiny: {
-                dataType: 'Text',
-                isNullable: 'False',
-                direction: 'in',
-                access: 'visible'
-              },
-              PE_ID: {
-                dataType: 'Text',
-                isNullable: 'False',
-                direction: 'in',
-                access: 'visible'
-              },
-              TEMPLATE_ID: {
-                dataType: 'Text',
-                isNullable: 'False',
-                direction: 'in',
-                access: 'visible'
-              },
-              TELEMARKETER_ID: {
-                dataType: 'Text',
-                isNullable: 'False',
-                direction: 'in',
-                access: 'visible'
-              },
               message: {
                 dataType: 'Text',
                 isNullable: 'False',

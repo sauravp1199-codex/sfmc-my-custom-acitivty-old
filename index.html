@@ -139,44 +139,6 @@
                 <hr>
 
                 <div class="form-field">
-                    <div><label for="transactionID">Transaction ID:</label></div>
-                    <input class="slds-form-element__control" id="transactionID" type="text" name="transactionID"
-                        placeholder="Auto-generated if left blank">
-                    <span class="helper-text">Leave blank to automatically generate a unique identifier when the
-                        activity is saved.</span>
-                </div>
-
-                <div class="form-field">
-                    <div><label for="campaignName">Campaign Name:</label></div>
-                    <input class="slds-form-element__control" id="campaignName" type="text" name="campaignName"
-                        value="">
-                </div>
-                <!-- <div>
-                    <div><label for="tiny">Tiny:</label></div>
-                    <input class="slds-form-element__control" id="tiny" type="text" name="tiny" value="">
-                </div> -->
-                <div class="form-field">
-                    <div><label for="tiny">Tiny:</label></div>
-                    <select class="slds-select" id="tiny" name="tiny">
-                        <option value="1">1</option>
-                        <option value="0">0</option>
-                    </select>
-                </div>
-
-                <div class="form-field">
-                    <div><label for="PE_ID">PE ID:</label></div>
-                    <input class="slds-form-element__control" id="PE_ID" type="text" name="PE_ID" value="">
-                </div>
-                <div class="form-field">
-                    <div><label for="TEMPLATE_ID">TEMPLATE ID:</label></div>
-                    <input class="slds-form-element__control" id="TEMPLATE_ID" type="text" name="TEMPLATE_ID" value="">
-                </div>
-                <div class="form-field">
-                    <div><label for="TELEMARKETER_ID">TELEMARKETER ID:</label></div>
-                    <input class="slds-form-element__control" id="TELEMARKETER_ID" type="text" name="TELEMARKETER_ID"
-                        value="">
-                </div>
-                <div class="form-field">
                     <div><label for="message">Message:</label></div>
                     <input class="slds-form-element__control" id="message" type="text" name="message" value="">
                 </div>
@@ -210,9 +172,10 @@
 
                 <script type="text/javascript">
                     (function () {
-                        const transactionInput = document.getElementById('transactionID');
                         const errorBanner = document.getElementById('form-error-banner');
                         const errorText = document.getElementById('form-error-text');
+                        const messageInput = document.getElementById('message');
+                        const mobilePhoneInput = document.getElementById('mobilePhoneAttribute');
 
                         function hideError() {
                             errorBanner.style.display = 'none';
@@ -224,42 +187,34 @@
                             errorBanner.style.display = 'flex';
                         }
 
-                        function ensureTransactionId() {
-                            if (!transactionInput.value) {
-                                transactionInput.value = `txn-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-                            }
-                        }
-
                         if (document.readyState === 'loading') {
-                            document.addEventListener('DOMContentLoaded', () => {
-                                ensureTransactionId();
-                                hideError();
-                            });
+                            document.addEventListener('DOMContentLoaded', hideError);
                         } else {
-                            ensureTransactionId();
                             hideError();
                         }
 
-                        document.querySelectorAll('#campaignName, #tiny, #PE_ID, #TEMPLATE_ID, #TELEMARKETER_ID, #message')
-                            .forEach((input) => {
-                                input.addEventListener('blur', hideError);
-                                input.addEventListener('input', hideError);
-                            });
+                        [messageInput, mobilePhoneInput].forEach((input) => {
+                            if (!input) {
+                                return;
+                            }
 
-                        // Validate required fields before SFMC reads them so that the user gets feedback early.
+                            input.addEventListener('blur', hideError);
+                            input.addEventListener('input', hideError);
+                        });
+
                         document.getElementById('step1').addEventListener('focusout', (event) => {
                             const target = event.target;
-                            if (target && target.id === 'TEMPLATE_ID' && !target.value.trim()) {
-                                showError('Template ID is required before the activity can be saved.');
+                            if (target && target.id === 'message' && !target.value.trim()) {
+                                showError('Message is required before the activity can be saved.');
+                            }
+
+                            if (target && target.id === 'mobilePhoneAttribute' && !target.value.trim()) {
+                                showError('Mobile Phone Attribute is required before the activity can be saved.');
                             }
                         });
 
-                        // In case the user clears the field manually we will re-seed it on blur.
-                        transactionInput.addEventListener('blur', ensureTransactionId);
-
                         // Expose helper for integration tests (optional)
                         window.__activityForm = {
-                            ensureTransactionId,
                             showError,
                             hideError
                         };
