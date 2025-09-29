@@ -56,7 +56,7 @@ Automated tests are not defined. Validate functionality manually by triggering t
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `PORT` | `3001` | Express server listening port. |
-| `SFMC_BASE_URL` | _not set_ | Optionally override the hostname used in `config-json.js` if hosting endpoints under a different domain. Update the file accordingly when customizing. |
+| `SFMC_BASE_URL` | _not set_ | Override the base URL used in `config-json.js`. When unset, the service derives the base URL from the incoming request (including `X-Forwarded-*` headers) and falls back to `https://sfmc.comsensetechnologies.com`. |
 | `LOG_LEVEL` | _not set_ | Implement custom logging controls in `app.js` if required (currently a simple console logger is used). |
 
 > **Security note:** `/executeV2` forwards SMS payloads to an external API using static credentials. Store these secrets in environment variables or a secure vault before deploying to production.

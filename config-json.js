@@ -9,7 +9,37 @@
 // ****************
 
 
+const DEFAULT_BASE_URL = 'https://sfmc.comsensetechnologies.com';
+
+function resolveBaseUrl(req) {
+  if (process.env.SFMC_BASE_URL) {
+    return process.env.SFMC_BASE_URL.replace(/\/$/, '');
+  }
+
+  if (!req) {
+    return DEFAULT_BASE_URL;
+  }
+
+  const forwardedHost = req.get('x-forwarded-host');
+  const host = (forwardedHost || req.get('host') || '').split(',')[0]?.trim();
+
+  if (!host) {
+    return DEFAULT_BASE_URL;
+  }
+
+  const forwardedProto = req.get('x-forwarded-proto');
+  const proto = (forwardedProto || req.protocol || 'https').split(',')[0]?.trim();
+
+  if (!proto) {
+    return DEFAULT_BASE_URL;
+  }
+
+  return `${proto}://${host}`.replace(/\/$/, '');
+}
+
 module.exports = function configJSON(req) {
+  const baseUrl = resolveBaseUrl(req);
+
   return {
     workflowApiVersion: '1.1',
     // metaData points 
@@ -44,22 +74,22 @@ module.exports = function configJSON(req) {
         concurrentRequests: 5,
         // url:'https://customactivityv2.herokuapp.com/execute',
         // url:'http://localhost:3001/executeV2',
-        url: 'https://sfmc.comsensetechnologies.com/executeV2',
+        url: `${baseUrl}/executeV2`,
       },
     },
 
     configurationArguments: {
       save: {
-        url: 'https://sfmc.comsensetechnologies.com/save'
+        url: `${baseUrl}/save`
       },
       publish: {
-        url: 'https://sfmc.comsensetechnologies.com/publish'
+        url: `${baseUrl}/publish`
       },
       validate: {
-        url: 'https://sfmc.comsensetechnologies.com/validate'
+        url: `${baseUrl}/validate`
       },
       stop: {
-        url: 'https://sfmc.comsensetechnologies.com/stop'
+        url: `${baseUrl}/stop`
       }
     },
 
