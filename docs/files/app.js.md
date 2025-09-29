@@ -44,19 +44,17 @@ Primary Express server responsible for hosting the custom activity assets and ex
 ## Usage Example
 Trigger the execution endpoint manually during development:
 ```bash
-curl -X POST http://localhost:3001/executeV2 \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "inArguments": [{
-      "campaignName": "Sample",
-      "tiny": "1",
-      "PE_ID": "12345",
-      "TEMPLATE_ID": "67890",
-      "TELEMARKETER_ID": "TM-001",
-      "message": "Test SMS"
-    }],
-    "keyValue": "CONTACT-001"
-  }'
+curl --location 'http://localhost:3001/executeV2' \
+--header 'Content-Type: application/json' \
+--data '{
+  "inArguments": [
+    {
+      "message": "Thank you for your purchase!",
+      "firstNameAttribute": "{{Contact.Attribute.MyDE.FirstName}}",
+      "mobilePhoneAttribute": "{{Contact.Attribute.MyDE.mobile}}"
+    }
+  ]
+}'
 ```
 
 ## Related Files
