@@ -1,132 +1,128 @@
-# Salesforce Marketing Cloud Journey Builder - Custom Activity Example
-This repository aims to instruct beginners on how to create custom activities in Marketing Cloud. The walkthrough guide can be found here: [https://balwillsfdc.github.io/sfmc-my-custom-acitivty/](https://balwillsfdc.github.io/sfmc-my-custom-acitivty/) The requirements for building your own custom JB activity are as follows: 
-- Javascript / Node.js knowledge
-- Marketing Cloud Journey Builder Expertise
-- Marketing Cloud Account
-- Heroku Account
+# SFMC DIGO SMS Custom Activity
 
-## Deploy to Heroku
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?https://github.com/balwillSFDC/sfmc-my-custom-acitivty)
+A production-hardened Salesforce Marketing Cloud (SFMC) Journey Builder Custom Activity that collects Journey configuration values, validates execute payloads, and relays SMS requests to the DIGO provider with resilient logging and retry logic. The repository bundles both the Express-based middleware and the inspector UI rendered inside Journey Builder.
 
-# Notes
-- For additional examples/documentation on Salesforce Marketing Cloud Custom Activities check the [github](https://github.com/salesforce-marketingcloud/sfmc-example-jb-custom-activity) and [documentation](https://developer.salesforce.com/docs/marketing/marketing-cloud/guide/creating-activities.html)
-## Postman Collection
-A Postman collection covering every HTTP endpoint exposed by `app.js` is available at `postman/sfmc-custom-activity.postman_collection.json`. Import it into Postman and update the `baseUrl` variable to match your deployment host before sending requests.
+## Architecture Overview
 
-## SMS Activity Hardening Notes
+### Component Diagram
 
-### Setup
+```
+Journey Builder Canvas
+        │
+        │ 1. Load configuration (GET /config.json)
+        ▼
+Express Server (app.js)
+        │
+        ├── Serves inspector UI (index.html + main.js)
+        │
+        └── Runtime execution (POST /executeV2)
+                │
+                ├─► Activity Validation (lib/activity-validation.js)
+                │        │
+                │        └─► DIGO Payload Builder (lib/digo-payload.js)
+                │                │
+                │                └─► DIGO HTTP Client (lib/digo-client.js)
+                │                            │
+                │                            └─► External DIGO SMS API
+                │
+                └─► Structured Logging (lib/logger.js)
+```
 
-1. Install dependencies and start the local server:
+### Flow Summary
 
-   ```bash
-   npm install
-   npm start
-   ```
+1. Journey Builder loads `/config.json` to render the Custom Activity on the canvas.
+2. The inspector iframe loads `index.html` and the bundled `main.js`, which use Postmonger to exchange data with Journey Builder.
+3. When a contact hits the activity, Journey Builder sends a POST to `/executeV2`.
+4. The server validates payloads, constructs the DIGO request, retries transient failures, and returns status metadata to Journey Builder.
 
-2. Point your Marketing Cloud custom activity package to the public URL that proxies to this server (for local development use a tunnelling tool such as `ngrok`).
+## Getting Started
 
-### Required environment variables
+### Prerequisites
+
+* Node.js 16+ and npm
+* Access to an SFMC account with Journey Builder and Custom Activity package
+* Optional: Heroku (or similar) account for hosting
+
+### Installation
+
+```bash
+npm install
+```
+
+### Local Development
+
+```bash
+# Run Express and webpack watcher together
+npm run dev
+
+# Or run the API alone (requires existing dist/main.js)
+npm start
+```
+
+The server listens on `http://localhost:3001` by default. For Journey Builder integration, expose the port via a tunneling tool such as `ngrok` and configure your Custom Activity package to use the tunnel URL.
+
+### Testing and Tooling
+
+* `npm test` – Placeholder script (update when automated tests are added).
+* Postman collection: `postman/sfmc-custom-activity.postman_collection.json` includes requests for every endpoint.
+
+## Environment Variables
 
 | Variable | Description |
 | --- | --- |
-| `PUBLIC_BASE_URL` | Overrides the auto-detected host when generating `config.json` links. Recommended for production deployments behind load balancers. |
-| `DIGO_API_URL` | (Optional) SMS provider endpoint. Defaults to `https://engage-api.digo.link/notify`. |
-| `DIGO_X_AUTHORIZATION` | Value for the `X-Authorization` header required by the SMS provider. |
-| `DIGO_BEARER_TOKEN` | Bearer token passed in the `Authorization` header. |
-| `DIGO_HTTP_TIMEOUT_MS` | (Optional) Timeout in milliseconds for the outbound SMS request. Defaults to `15000`. |
-| `DIGO_RETRY_ATTEMPTS` | (Optional) How many times to retry provider calls on retryable failures. Defaults to `3`. |
-| `DIGO_RETRY_BACKOFF_MS` | (Optional) Base delay in milliseconds used for exponential backoff. Defaults to `500`. |
-| `DIGO_DEFAULT_MSISDNS` | Comma-separated list of fallback MSISDNs used when `dataSet` is not provided by Journey Builder. |
-| `DIGO_ORIGINATOR` | (Optional) Originator string for the SMS payload. Defaults to `TACMPN`. |
-| `DIGO_STUB_MODE` | When set to `true`, skips the outbound call and echoes the payload for integration testing. |
+| `PUBLIC_BASE_URL` | Fully qualified base URL used to generate config links (overrides proxy-derived host/protocol). |
+| `PORT` | Express listen port (defaults to `3001`). |
+| `LOG_LEVEL` | Minimum log level (`debug`, `info`, `warn`, `error`). Defaults to `info`. |
+| `DIGO_API_URL` | DIGO API endpoint (`https://engage-api.digo.link/notify` by default). |
+| `DIGO_X_AUTHORIZATION` | Optional `X-Authorization` header for DIGO authentication. |
+| `DIGO_BEARER_TOKEN` | Optional bearer token for DIGO authentication. |
+| `DIGO_HTTP_TIMEOUT_MS` | HTTP timeout in milliseconds (default `15000`). |
+| `DIGO_RETRY_ATTEMPTS` | Maximum retry attempts on transient errors (default `3`). |
+| `DIGO_RETRY_BACKOFF_MS` | Initial backoff delay in ms (default `500`, doubles per retry). |
+| `DIGO_DEFAULT_MSISDNS` | Comma-separated fallback MSISDN list when Journey data lacks recipients. |
+| `DIGO_ORIGINATOR` | SMS originator/sender ID (default `TACMPN`). |
+| `DIGO_STUB_MODE` | When set to `true`, skips outbound DIGO calls and returns stub responses (ideal for testing). |
 
-### Validating the execute payload
+## Deployment Notes
 
-The Journey Builder canvas must submit an `execute` payload containing the following structure in `inArguments[0]`:
+* **Heroku** – Repository includes `app.json` and `Procfile`. Deploy via the Heroku Dashboard or the "Deploy to Heroku" button and configure environment variables under Settings → Config Vars.
+* **Salesforce Platform / Other Node Hosts** – Ensure build steps run `npm install` and `npx webpack --mode=production` so that `dist/main.js` exists before starting `node app.js`.
+* **Static Assets** – SLDS assets are served from `node_modules/@salesforce-ux/design-system`. Confirm your hosting platform allows static files via Express middleware.
 
-```json
-{
-  "transactionID": "txn-123",           // optional, generated automatically if omitted
-  "campaignName": "September SMS Push",
-  "tiny": "1",                          // string, must be "0" or "1"
-  "PE_ID": "PE123456",
-  "TEMPLATE_ID": "TMP-001",
-  "TELEMARKETER_ID": "TMK-2024",
-  "message": "Hello from Journey Builder!",
-  "dataSet": [                           // optional override for target MSISDNs
-    { "msisdn": "911234567890", "message": "Hello from Journey Builder!" }
-  ]
-}
-```
+## Troubleshooting
 
-### Sample execute request
+| Symptom | Suggested Checks |
+| --- | --- |
+| Journey Builder inspector fails to load | Confirm `/config.json` responds with 200 and that `PUBLIC_BASE_URL` resolves correctly. Inspect browser console for Postmonger errors. |
+| `/executeV2` returns `status: 'invalid'` | Review the JSON response `details` array and ensure Journey data extensions map required fields. Logs include correlation IDs for tracing. |
+| Provider request failures | Validate DIGO credentials and network reachability. When `DIGO_STUB_MODE` is `true`, outbound calls are skipped. |
+| Missing SMS recipients | Provide `dataSet` in Journey mappings or configure `DIGO_DEFAULT_MSISDNS`. |
+| Logs not appearing | Check `LOG_LEVEL` and your hosting platform's log drain or console. |
 
-```http
-POST /executeV2 HTTP/1.1
-Host: your-domain.example.com
-Content-Type: application/json
-X-Correlation-Id: 4ff5a4e0-8433-4dc3-9c8b-a310816a0132
+## Glossary
 
-{
-  "keyValue": "{{Context.ContactKey}}",
-  "inArguments": [
-    {
-      "transactionID": "txn-20230926-001",
-      "campaignName": "Journey Kickoff",
-      "tiny": "1",
-      "PE_ID": "PE12345",
-      "TEMPLATE_ID": "TEMPLATE-001",
-      "TELEMARKETER_ID": "TMK001",
-      "message": "Thank you for joining our program!"
-    }
-  ]
-}
-```
+* **Custom Activity** – Extensible step executed within SFMC Journey Builder.
+* **In Arguments** – Data payload Journey Builder passes to the activity during execution.
+* **Postmonger** – Messaging bridge used between the Journey Builder canvas and iframe-hosted activities.
+* **MSISDN** – International phone number format required by SMS providers.
+* **Stub Mode** – Feature that emulates provider responses without reaching external services.
 
-Successful response example:
+## File-Level Documentation
 
-```http
-HTTP/1.1 200 OK
-Content-Type: application/json
-X-Correlation-Id: 4ff5a4e0-8433-4dc3-9c8b-a310816a0132
+Detailed documentation is available for every source file under `docs/files/`:
 
-{
-  "status": "ok",
-  "transactionID": "txn-20230926-001",
-  "providerStatus": 202,
-  "providerResponse": {
-    "message": "Accepted",
-    "ticketId": "abc123"
-  }
-}
-```
+* [`app.js`](docs/files/app.js.md)
+* [`config-json.js`](docs/files/config-json.js.md)
+* [`lib/logger.js`](docs/files/lib/logger.js.md)
+* [`lib/activity-validation.js`](docs/files/lib/activity-validation.js.md)
+* [`lib/digo-payload.js`](docs/files/lib/digo-payload.js.md)
+* [`lib/digo-client.js`](docs/files/lib/digo-client.js.md)
+* [`src/index.js`](docs/files/src/index.js.md)
+* [`index.html`](docs/files/index.html.md)
+* [`webpack.config.js`](docs/files/webpack.config.js.md)
+* [`Procfile`](docs/files/Procfile.md)
+* [`app.json`](docs/files/app.json.md)
+* [`package.json`](docs/files/package.json.md)
+* [`main.js`](docs/files/main.js.md)
 
-To reproduce the validation behaviour locally you can send the sample payload via `curl`:
-
-```bash
-curl -X POST "http://localhost:3001/executeV2" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "keyValue": "contact-key",
-    "inArguments": [
-      {
-        "transactionID": "txn-local-001",
-        "campaignName": "Local Test",
-        "tiny": "1",
-        "PE_ID": "PE123",
-        "TEMPLATE_ID": "TMP-123",
-        "TELEMARKETER_ID": "TMK-123",
-        "message": "Integration test"
-      }
-    ]
-  }'
-```
-
-When `DIGO_STUB_MODE=true` the response body includes the echoed payload so you can validate downstream integrations without reaching the SMS provider.
-
-### Known edge cases
-
-- Requests without MSISDNs in `dataSet` and without `DIGO_DEFAULT_MSISDNS` configured will be rejected with a validation error because the downstream provider requires at least one recipient.
-- Provider errors that return HTTP status codes below `500` (for example `400` or `401`) are treated as permanent failures; retries stop immediately and Journey Builder receives the provider status.
-- Journey Builder may call `/save`, `/publish`, `/validate`, or `/stop` with empty bodies when the canvas is initialising. These requests are allowed and logged, but validation occurs automatically once `inArguments` are present.
+Refer to these documents for function-level API details, data flow diagrams, and troubleshooting guidance.
