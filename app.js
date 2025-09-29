@@ -67,9 +67,16 @@ app.get('/config.json', function (req, res) {
 function acknowledgeLifecycleEvent(routeName) {
   return (req, res) => {
     logger.info(`${routeName} lifecycle hook invoked.`, { correlationId: req.correlationId });
+    logger.debug(`${routeName} lifecycle payload received.`, {
+      correlationId: req.correlationId,
+      requestBody: req.body
+    });
     try {
       if (req.body && Array.isArray(req.body.inArguments) && req.body.inArguments.length > 0) {
         validateExecuteRequest(req.body);
+        logger.debug(`${routeName} lifecycle payload validated successfully.`, {
+          correlationId: req.correlationId
+        });
       }
     } catch (error) {
       if (error instanceof ValidationError) {
@@ -96,10 +103,34 @@ app.post('/stop', acknowledgeLifecycleEvent('stop'));
 app.post('/executeV2', async (req, res) => {
   const correlationId = req.correlationId;
   logger.info('executeV2 invoked.', { correlationId });
+  logger.debug('executeV2 request payload received.', {
+    correlationId,
+    requestBody: req.body
+  });
 
   try {
     const validatedArgs = validateExecuteRequest(req.body);
+    logger.debug('executeV2 request payload validated.', {
+      correlationId,
+      validationResult: {
+        message: validatedArgs.message,
+        recipientMobilePhone: validatedArgs.recipientMobilePhone,
+        mappedValues: validatedArgs.mappedValues,
+        rawArguments: validatedArgs.rawArguments
+      }
+    });
     const providerPayload = buildDigoPayload(validatedArgs);
+    logger.debug('executeV2 resolved values.', {
+      correlationId,
+      resolved: {
+        message: validatedArgs.message,
+        mobilePhone: providerPayload.message.recipient.address,
+        firstName:
+          validatedArgs.mappedValues && validatedArgs.mappedValues.firstName
+            ? validatedArgs.mappedValues.firstName
+            : validatedArgs.rawArguments.firstName || validatedArgs.rawArguments.firstNameAttribute
+      }
+    });
 
     const recipientPreview = { ...providerPayload.message.recipient };
     if (recipientPreview.address) {
@@ -127,8 +158,20 @@ app.post('/executeV2', async (req, res) => {
       }
     });
 
+    logger.debug('executeV2 provider payload built.', {
+      correlationId,
+      payload: providerPayload
+    });
+
     const providerResponse = await sendPayloadWithRetry(providerPayload, {
-      headers: { 'X-Correlation-Id': correlationId }
+      headers: { 'X-Correlation-Id': correlationId },
+      correlationId
+    });
+
+    logger.info('executeV2 provider response received.', {
+      correlationId,
+      providerStatus: providerResponse.status,
+      providerResponse: providerResponse.data
     });
 
     return res.status(200).json({
