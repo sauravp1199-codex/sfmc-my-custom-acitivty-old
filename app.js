@@ -14,7 +14,11 @@ const path = require('path');
 const configJSON = require('./config-json');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('./lib/logger');
-const { ValidationError, validateExecuteRequest } = require('./lib/activity-validation');
+const {
+  ValidationError,
+  validateExecuteRequest,
+  validateLifecycleRequest
+} = require('./lib/activity-validation');
 const { buildDigoPayload } = require('./lib/digo-payload');
 const { sendPayloadWithRetry, ProviderRequestError } = require('./lib/digo-client');
 
@@ -73,7 +77,7 @@ function acknowledgeLifecycleEvent(routeName) {
     });
     try {
       if (req.body && Array.isArray(req.body.inArguments) && req.body.inArguments.length > 0) {
-        validateExecuteRequest(req.body);
+        validateLifecycleRequest(req.body);
         logger.debug(`${routeName} lifecycle payload validated successfully.`, {
           correlationId: req.correlationId
         });
