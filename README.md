@@ -73,9 +73,8 @@ The server listens on `http://localhost:3001` by default. For Journey Builder in
 | `PUBLIC_BASE_URL` | Fully qualified base URL used to generate config links (overrides proxy-derived host/protocol). |
 | `PORT` | Express listen port (defaults to `3001`). |
 | `LOG_LEVEL` | Minimum log level (`debug`, `info`, `warn`, `error`). Defaults to `info`. |
-| `DIGO_API_URL` | DIGO API endpoint (`https://engage-api.digo.link/notify` by default). |
-| `DIGO_X_AUTHORIZATION` | Optional `X-Authorization` header for DIGO authentication. |
-| `DIGO_BEARER_TOKEN` | Optional bearer token for DIGO authentication. |
+| `DIGO_API_URL` | Provider API endpoint (`https://sfmc.comsensetechnologies.com/api/message` by default). |
+| `COMSENSE_BASIC_AUTH` | Base64-encoded `username:password` string used for HTTP Basic authentication. |
 | `DIGO_HTTP_TIMEOUT_MS` | HTTP timeout in milliseconds (default `15000`). |
 | `DIGO_RETRY_ATTEMPTS` | Maximum retry attempts on transient errors (default `3`). |
 | `DIGO_RETRY_BACKOFF_MS` | Initial backoff delay in ms (default `500`, doubles per retry). |
@@ -95,7 +94,7 @@ The server listens on `http://localhost:3001` by default. For Journey Builder in
 | --- | --- |
 | Journey Builder inspector fails to load | Confirm `/config.json` responds with 200 and that `PUBLIC_BASE_URL` resolves correctly. Inspect browser console for Postmonger errors. |
 | `/executeV2` returns `status: 'invalid'` | Review the JSON response `details` array and ensure Journey data extensions map required fields. Logs include correlation IDs for tracing. |
-| Provider request failures | Validate DIGO credentials and network reachability. When `DIGO_STUB_MODE` is `true`, outbound calls are skipped. |
+| Provider request failures | Validate provider credentials (e.g., `COMSENSE_BASIC_AUTH`) and network reachability. When `DIGO_STUB_MODE` is `true`, outbound calls are skipped. |
 | Missing SMS recipients | Provide `dataSet` in Journey mappings or configure `DIGO_DEFAULT_MSISDNS`. |
 | Logs not appearing | Check `LOG_LEVEL` and your hosting platform's log drain or console. |
 
