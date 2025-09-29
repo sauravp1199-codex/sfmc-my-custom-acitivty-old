@@ -61,6 +61,10 @@ npm start
 
 The server listens on `http://localhost:3001` by default. For Journey Builder integration, expose the port via a tunneling tool such as `ngrok` and configure your Custom Activity package to use the tunnel URL.
 
+### Journey Data Binding Tokens
+
+Use the inspector's attribute picker to map Data Extension values into the activity. The **First Name Attribute** and **Mobile Phone Attribute** fields expect tokens in the `{{Contact.Attribute.<DataExtensionName>.<FieldName>}}` format (for example, `{{Contact.Attribute.SMSAudience.FirstName}}` and `{{Contact.Attribute.SMSAudience.MobilePhone}}`). Journey Builder resolves the tokens at execution time, so do not wrap them in quotes or add additional braces.
+
 ### Testing and Tooling
 
 * `npm test` – Placeholder script (update when automated tests are added).
