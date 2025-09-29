@@ -99,13 +99,34 @@ app.post('/executeV2', async (req, res) => {
 
   try {
     const validatedArgs = validateExecuteRequest(req.body);
-    const providerPayload = buildDigoPayload(validatedArgs, {
-      dataSetOverride: validatedArgs.rawArguments.dataSet
-    });
+    const providerPayload = buildDigoPayload(validatedArgs);
+
+    const recipientPreview = { ...providerPayload.message.recipient };
+    if (recipientPreview.address) {
+      recipientPreview.address = '[REDACTED]';
+    }
+
+    const metaDataPreview = { ...providerPayload.metaData };
+    if (metaDataPreview.mappedValues) {
+      metaDataPreview.mappedValues = { ...metaDataPreview.mappedValues };
+      if (metaDataPreview.mappedValues.mobilePhone) {
+        metaDataPreview.mappedValues.mobilePhone = '[REDACTED]';
+      }
+    }
 
     logger.debug('Prepared provider payload.', {
       correlationId,
-      payloadPreview: { ...providerPayload, dataSet: `[${providerPayload.dataSet.length} recipients]` }
+      payloadPreview: {
+        transactionID: providerPayload.transactionID,
+        message: {
+          channel: providerPayload.message.channel,
+          content: providerPayload.message.content,
+          recipient: recipientPreview
+        },
+        sender: providerPayload.sender,
+        preferences: providerPayload.preferences,
+        metaData: metaDataPreview
+      }
     });
 
     const providerResponse = await sendPayloadWithRetry(providerPayload, {
