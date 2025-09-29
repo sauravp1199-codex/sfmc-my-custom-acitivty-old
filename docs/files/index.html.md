@@ -6,7 +6,7 @@ Provides the user interface for configuring the Custom Activity inside the Journ
 ## Structure Overview
 
 * Includes Salesforce Lightning Design System (SLDS) stylesheets and Google Fonts.
-* Defines form inputs for all execute-time fields: `transactionID`, `campaignName`, `tiny`, `PE_ID`, `TEMPLATE_ID`, `TELEMARKETER_ID`, `message`.
+* Defines form inputs for all execute-time fields: `transactionID`, `campaignName`, `tiny`, `PE_ID`, `TEMPLATE_ID`, `TELEMARKETER_ID`, `message`, `firstNameAttribute`, `mobilePhoneAttribute`.
 * Embeds inline `<script>` to auto-generate transaction IDs, manage error banner state, and expose helper functions for tests.
 * Loads the compiled `main.js` bundle at the end to wire Postmonger interactions.
 
@@ -17,6 +17,7 @@ Provides the user interface for configuring the Custom Activity inside the Journ
 | `.hero-banner` image | Visual banner at top of inspector for branding. |
 | `.activity-wrapper` | Container card that holds the activity form using custom theming variables. |
 | Form fields | Styled inputs/selects aligned with SLDS conventions. Required fields display helper text or error styling. |
+| Attribute helper text | Reminds users to use the Journey Builder attribute picker to insert `{{Contact.Attribute.<DataExtensionName>.<FieldName>}}` tokens for the `firstNameAttribute` and `mobilePhoneAttribute` inputs. |
 | Error banner (`#form-error-banner`) | Hidden by default; shown when client-side validation fails in the inline script. |
 | Inline IIFE | Defines `ensureTransactionId`, `hideError`, `showError`, binds blur/input listeners, and exposes `window.__activityForm`. |
 | `<script src="main.js">` | Loads the bundled JavaScript generated from `src/index.js`. |

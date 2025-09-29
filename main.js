@@ -447,28 +447,44 @@
 				inArguments = []
 			}
 
-			/* let urlStringObj = inArguments.find((obj) => obj.urlString)
-			 let payloadStringObj = inArguments.find((obj) => obj.payload)
-		   
-			 if (urlStringObj) {
-			   prePopulateInput('url', urlStringObj.urlString)
-			 }
-		   
-			 if (payloadStringObj) {
-			   prePopulateInput('payload', JSON.stringify(payloadStringObj.payload, null, 4))
-			 }*/
+                        const [firstInArgument = {}] = inArguments
+                        const fieldsToPopulate = [
+                                'transactionID',
+                                'campaignName',
+                                'tiny',
+                                'PE_ID',
+                                'TEMPLATE_ID',
+                                'TELEMARKETER_ID',
+                                'message',
+                                'firstNameAttribute',
+                                'mobilePhoneAttribute'
+                        ]
 
-		}
+                        fieldsToPopulate.forEach((field) => {
+                                if (firstInArgument[field] !== undefined) {
+                                        prePopulateInput(field, firstInArgument[field])
+                                }
+                        })
+
+                }
 
 		// function jsFriendlyJSONStringify (s) {
 		//   return JSON.stringify(s).replace('\\', '')
 		// }
 
 
-		function prePopulateInput(inputFieldId, inputValue) {
-			let inputField = document.getElementById(inputFieldId)
-			inputField.value = inputValue
-		}
+                function prePopulateInput(inputFieldId, inputValue) {
+                        let inputField = document.getElementById(inputFieldId)
+                        if (!inputField) {
+                                return
+                        }
+
+                        if (inputValue === undefined || inputValue === null) {
+                                inputField.value = ''
+                        } else {
+                                inputField.value = inputValue
+                        }
+                }
 
 		function onDoneButtonClick() {
 			// we must set metaData.isConfigured in order to tell JB that this activity
@@ -479,12 +495,14 @@
 			let PE_ID = document.getElementById('PE_ID').value
 			let TEMPLATE_ID = document.getElementById('TEMPLATE_ID').value
 			let TELEMARKETER_ID = document.getElementById('TELEMARKETER_ID').value
-			let message = document.getElementById('message').value
+                        let message = document.getElementById('message').value
+                        let firstNameAttribute = document.getElementById('firstNameAttribute').value
+                        let mobilePhoneAttribute = document.getElementById('mobilePhoneAttribute').value
 
 
 			if (TEMPLATE_ID.length > 0) {
 				activity.metaData.isConfigured = true;
-				activity.arguments.execute.inArguments = [{ transactionID, campaignName, tiny, PE_ID, TEMPLATE_ID, TELEMARKETER_ID, message }]
+                                activity.arguments.execute.inArguments = [{ transactionID, campaignName, tiny, PE_ID, TEMPLATE_ID, TELEMARKETER_ID, message, firstNameAttribute, mobilePhoneAttribute }]
 
 				connection.trigger('updateActivity', activity)
 				console.log(`Activity has been updated. Activity: ${JSON.stringify(activity)}`)

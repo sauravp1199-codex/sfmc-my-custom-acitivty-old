@@ -181,6 +181,22 @@
                     <input class="slds-form-element__control" id="message" type="text" name="message" value="">
                 </div>
 
+                <div class="form-field">
+                    <div><label for="firstNameAttribute">First Name Attribute:</label></div>
+                    <input class="slds-form-element__control" id="firstNameAttribute" type="text"
+                        name="firstNameAttribute" placeholder="{{Contact.Attribute.MyDE.FirstName}}">
+                    <span class="helper-text">Use the attribute picker to insert the Data Extension token for your contact's
+                        first name.</span>
+                </div>
+
+                <div class="form-field">
+                    <div><label for="mobilePhoneAttribute">Mobile Phone Attribute:</label></div>
+                    <input class="slds-form-element__control" id="mobilePhoneAttribute" type="text"
+                        name="mobilePhoneAttribute" placeholder="{{Contact.Attribute.MyDE.MobilePhone}}">
+                    <span class="helper-text">Use the attribute picker to insert the Data Extension token for the recipient's
+                        mobile number.</span>
+                </div>
+
                 <div id="form-error-banner" class="slds-notify slds-notify_alert slds-theme_alert-texture"
                     style="display:none; margin-top:1rem;" role="alert">
                     <span class="slds-assistive-text">Error</span>

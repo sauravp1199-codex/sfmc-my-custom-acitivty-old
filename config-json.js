@@ -126,6 +126,18 @@ module.exports = function configJSON(req) {
                 isNullable: 'False',
                 direction: 'in',
                 access: 'visible'
+              },
+              firstNameAttribute: {
+                dataType: 'Text',
+                isNullable: 'True',
+                direction: 'in',
+                access: 'visible'
+              },
+              mobilePhoneAttribute: {
+                dataType: 'Text',
+                isNullable: 'False',
+                direction: 'in',
+                access: 'visible'
               }
             }
           ],
