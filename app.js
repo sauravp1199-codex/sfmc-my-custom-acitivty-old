@@ -117,14 +117,12 @@ app.post('/executeV2', async (req, res) => {
     logger.debug('Prepared provider payload.', {
       correlationId,
       payloadPreview: {
-        transactionID: providerPayload.transactionID,
         message: {
           channel: providerPayload.message.channel,
           content: providerPayload.message.content,
           recipient: recipientPreview
         },
         sender: providerPayload.sender,
-        preferences: providerPayload.preferences,
         metaData: metaDataPreview
       }
     });
@@ -135,7 +133,6 @@ app.post('/executeV2', async (req, res) => {
 
     return res.status(200).json({
       status: 'ok',
-      transactionID: providerPayload.transactionID,
       providerStatus: providerResponse.status,
       providerResponse: providerResponse.data
     });

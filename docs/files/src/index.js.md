@@ -16,13 +16,13 @@ While not exported as a module, the file defines key functions and event handler
 | `onCancelButtonClick()` | Cancels edits by clearing dirty state and requesting the inspector to close. |
 | `onFormEntry(event)` | Marks the activity as dirty when the user types in form fields. |
 | `setupExampleTestHarness()` | Creates a mock Postmonger session for local development, exposing helper methods via `window.jb`. |
-| Inline IIFE in HTML (`window.__activityForm`) | Provides helpers (`ensureTransactionId`, `showError`, `hideError`) to manage UI state; documented in `index.html`. |
+| Inline IIFE in HTML (`window.__activityForm`) | Provides helpers (`showError`, `hideError`) to manage UI state; documented in `index.html`. |
 
 ## Key Parameters and Return Types
 
 * Postmonger callbacks receive `payload` objects representing the activity definition supplied by Journey Builder.
-* Form handlers read/write to DOM inputs (`transactionID`, `campaignName`, `tiny`, `PE_ID`, `TEMPLATE_ID`, `TELEMARKETER_ID`, `message`).
-* `onDoneButtonClick` constructs `inArguments` with either `{ urlString, payload }` (legacy) or SMS fields depending on UI values. Errors surface as UI validation states rather than return values.
+* Form handlers read/write to DOM inputs (`message`, `firstNameAttribute`, `mobilePhoneAttribute`).
+* `onDoneButtonClick` constructs `inArguments` with the SMS configuration fields and surfaces validation errors through the inspector UI rather than return values.
 
 ## External Dependencies
 
@@ -40,8 +40,7 @@ While not exported as a module, the file defines key functions and event handler
 
 ## Error Handling and Edge Cases
 
-* Minimal client-side validation: ensures URL field (legacy) is populated before saving; highlights errors in the DOM.
-* JSON parsing errors for payload field show inline error state.
+* Client-side validation ensures `message` and `mobilePhoneAttribute` are present before saving and highlights errors in the DOM via the shared helper.
 * Development harness logs interactions to the console for debugging.
 
 ## Usage Example

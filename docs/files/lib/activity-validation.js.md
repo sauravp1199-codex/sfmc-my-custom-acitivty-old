@@ -14,26 +14,25 @@ Centralizes validation logic for Journey Builder execute payloads. Ensures requi
 ## Key Parameters and Return Types
 
 * `validateExecuteRequest(body)` expects a Marketing Cloud execute payload object containing `inArguments`.
-  * Returns an object `{ transactionID, campaignName, tiny, PE_ID, TEMPLATE_ID, TELEMARKETER_ID, message, rawArguments }` where `transactionID` is auto-generated if absent.
+  * Returns an object `{ message, recipientMobilePhone, mappedValues, rawArguments }`.
   * Throws `ValidationError` with `details` array describing missing or invalid fields.
 * `normalizeString(value)` accepts any value and returns a trimmed string.
 
 ## External Dependencies
 
-* `uuid` (`uuidv4`) used to generate a transaction ID when none is supplied.
+* No external dependencies beyond Node.js built-ins; this module is self-contained.
 
 ## Data Flow
 
 1. `validateExecuteRequest` delegates to `parseInArguments` (internal) to ensure the payload contains an object inside `inArguments`.
-2. Each required field is normalized and validated using helper functions (`validateTinyValue`, `validateRequiredField`).
+2. Required fields (`message`, `mobilePhone`) are normalized and validated using helper functions.
 3. Aggregates validation errors and throws once so that API handlers can emit a single structured response.
 4. On success, the returned object contains normalized values alongside the raw input object for downstream use.
 
 ## Error Handling and Edge Cases
 
 * Missing or non-array `inArguments` raise `ValidationError` with clear messaging.
-* `tiny` must be either `'0'` or `'1'`; invalid values produce descriptive details.
-* Optional `transactionID` is generated to prevent duplicate tracking gaps.
+* Missing or blank `mobilePhone` values surface descriptive errors to encourage proper Journey attribute mapping.
 * Trailing/leading spaces are trimmed to avoid mismatches with provider requirements.
 
 ## Usage Example
@@ -60,7 +59,7 @@ try {
 ## Troubleshooting
 
 * **Repeated validation failures** – Examine `error.details` returned from API responses; ensure Journey data bindings supply required fields.
-* **Unexpected `transactionID`** – If not provided, the validator generates a UUID; update the inspector UI to pass a specific identifier if needed.
+* **Missing mobile number** – Confirm the inspector UI maps the contact's mobile attribute or that the execute payload includes `mobilePhone`.
 * **Whitespace issues** – Use `normalizeString` in custom scripts when preparing Journey data to match server expectations.
 
 ## Glossary

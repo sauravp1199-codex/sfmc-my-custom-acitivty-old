@@ -16,7 +16,7 @@ Server-side entry point that exposes the Express application used by the Salesfo
 ## Key Parameters and Return Types
 
 * Lifecycle handlers expect SFMC lifecycle payloads (`req.body`) that contain optional `inArguments`. Successful validations return `{ status: 'ok' }`; validation failures return `{ status: 'invalid', message, details }` with HTTP 400.
-* `/executeV2` expects a Marketing Cloud execute payload (`req.body`). After validation it returns `{ status: 'ok', transactionID, providerStatus, providerResponse }` on success. Validation failures respond with HTTP 400, provider issues respond with HTTP 4xx/5xx plus `{ status: 'provider_error', message, details }`, and unexpected failures respond with HTTP 500 and `{ status: 'error', message }`.
+* `/executeV2` expects a Marketing Cloud execute payload (`req.body`). After validation it returns `{ status: 'ok', providerStatus, providerResponse }` on success. Validation failures respond with HTTP 400, provider issues respond with HTTP 4xx/5xx plus `{ status: 'provider_error', message, details }`, and unexpected failures respond with HTTP 500 and `{ status: 'error', message }`.
 
 ## External Dependencies
 
@@ -33,7 +33,7 @@ Server-side entry point that exposes the Express application used by the Salesfo
 
 1. Incoming HTTP requests receive a correlation ID (header `X-Correlation-Id`).
 2. Lifecycle requests are optionally validated and return acknowledgement JSON to Journey Builder.
-3. `/executeV2` validates incoming Journey execute payloads, builds the DIGO payload (including recipient dataset), logs a debug preview, and forwards it to the DIGO API via `sendPayloadWithRetry`.
+3. `/executeV2` validates incoming Journey execute payloads, builds the DIGO payload (including message content and mapped values), logs a debug preview, and forwards it to the DIGO API via `sendPayloadWithRetry`.
 4. Provider responses (or errors) are mapped back to SFMC-compatible JSON responses.
 
 ## Error Handling and Edge Cases
@@ -53,15 +53,10 @@ X-Correlation-Id: 12345
 {
   "inArguments": [
     {
-      "campaignName": "Spring SMS",
-      "tiny": "1",
-      "PE_ID": "PE123",
-      "TEMPLATE_ID": "TMP456",
-      "TELEMARKETER_ID": "TEL789",
       "message": "Welcome!",
-      "dataSet": [
-        { "msisdn": "+12025550123", "message": "Welcome!" }
-      ]
+      "mobilePhone": "+12025550123",
+      "firstNameAttribute": "{{Contact.Attribute.MyDE.FirstName}}",
+      "mobilePhoneAttribute": "{{Contact.Attribute.MyDE.MobilePhone}}"
     }
   ]
 }
@@ -72,7 +67,6 @@ Successful response:
 ```
 {
   "status": "ok",
-  "transactionID": "generated-id",
   "providerStatus": 200,
   "providerResponse": { ... }
 }
@@ -89,7 +83,7 @@ Successful response:
 ## Troubleshooting
 
 * **Lifecycle calls returning `status: 'invalid'`** – Inspect application logs for `ValidationError` warnings with correlation IDs. Confirm the inspector UI populated required fields.
-* **Provider errors (`status: 'provider_error'`)** – Check outbound payload logs and verify DIGO credentials and network reachability. Examine DIGO API logs correlated via `transactionID` or `X-Correlation-Id`.
+* **Provider errors (`status: 'provider_error'`)** – Check outbound payload logs and verify DIGO credentials and network reachability. Examine DIGO API logs correlated via the returned `X-Correlation-Id`.
 * **Static assets not loading** – Ensure the `dist/` bundle has been built (`npm run dev` or webpack) and that the deployment serves `/assets` and `/images`.
 
 Logs are emitted via `lib/logger.js`; review platform-specific log drains (Heroku, SFMC) filtering by correlation ID for full request traces.
