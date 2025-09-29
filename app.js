@@ -116,18 +116,11 @@ app.post('/stop', function (req, res) {
 {
   inArguments: [
     {
-      urlString: 'https://sfmc.comsensetechnologies.com/',
-      payload: [Object]
+      message: 'Thank you for your purchase!',
+      firstNameAttribute: '{{Contact.Attribute.MyDE.FirstName}}',
+      mobilePhoneAttribute: '{{Contact.Attribute.MyDE.mobile}}'
     }
   ];
-  outArguments: [];
-  activityObjectID: '9841db2b-a598-4b3a-b1af-0dd71cd8939a';
-  journeyId: 'b544882d-4160-4114-a419-7ff43e776b47';
-  activityId: '9841db2b-a598-4b3a-b1af-0dd71cd8939a';
-  definitionInstanceId: '4f60d95d-663e-468d-896a-d85c73a46f4a';
-  activityInstanceId: '394345a0-38f5-4b1b-9223-a271e6046f7f';
-  keyValue: '00Q4S000002CsSdUAK_v2';
-  mode: 0
 }
 
 app.post('/executeV2', async (req, res) => {

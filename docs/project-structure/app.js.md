@@ -316,27 +316,20 @@ app.post('/stop', function(req, res) {
 ```
 
 ## Define the execution route
-The execution route is the endpoint the Journey calls when a Subscriber enters the activity. It is where the magic happens! ✨ Marketing Cloud sends a request with payload containing metadata of the event. We can access this payload via ```req.body``` property. The most important properties from this metadata are the ```req.body.inArguments``` and ```req.body.keyValue```. The ```inArguments``` contains any static value (example: a datetime stamp) or value defined during the configuration of the activity (example: populated in the activity UI). ```keyValue``` is Contact Key of the Subscriber entering the activity. 
+The execution route is the endpoint the Journey calls when a Subscriber enters the activity. It is where the magic happens! ✨ Marketing Cloud sends a request with payload containing metadata of the event. We can access this payload via ```req.body``` property. The most important portion of this metadata is ```req.body.inArguments```, which contains static values (example: a datetime stamp) or values defined during the configuration of the activity (example: populated in the activity UI).
 
-Below, is a sample of a payload request our custom activity receives from Marketing Cloud. Note that  ```inArguments.urlString``` and ```inArguments.payload``` 
+Below, is a sample of a payload request our custom activity receives from Marketing Cloud. Note how the payload delivers the SMS content alongside the bound attributes for first name and mobile number.
 
 ```javascript
 // REQ.BODY SAMPLE
 {
   inArguments: [
     {
-      urlString: 'www.sampleurlstring.com',
-      payload: [Object]
+      message: 'Thank you for your purchase!',
+      firstNameAttribute: '{{Contact.Attribute.MyDE.FirstName}}',
+      mobilePhoneAttribute: '{{Contact.Attribute.MyDE.mobile}}'
     }
-  ],
-  outArguments: [],
-  activityObjectID: '9841db2b-a598-4b3a-b1af-0dd71cd8939a',
-  journeyId: 'b544882d-4160-4114-a419-7ff43e776b47',
-  activityId: '9841db2b-a598-4b3a-b1af-0dd71cd8939a',
-  definitionInstanceId: '4f60d95d-663e-468d-896a-d85c73a46f4a',
-  activityInstanceId: '394345a0-38f5-4b1b-9223-a271e6046f7f',
-  keyValue: 'contactKeyValue',
-  mode: 0
+  ]
 }
 ```
 
