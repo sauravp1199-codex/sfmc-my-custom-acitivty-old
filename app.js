@@ -17,10 +17,12 @@ const logger = require('./lib/logger');
 const {
   ValidationError,
   validateExecuteRequest,
-  validateLifecycleRequest
+  validateLifecycleRequest,
+  normalizeString
 } = require('./lib/activity-validation');
 const { buildDigoPayload } = require('./lib/digo-payload');
 const { sendPayloadWithRetry, ProviderRequestError } = require('./lib/digo-client');
+const { sanitizeObject, sanitizeValue } = require('./lib/log-sanitizer');
 
 const app = express();
 app.set('trust proxy', true);
@@ -45,6 +47,25 @@ app.use((req, res, next) => {
   next();
 });
 
+const lifecycleState = {
+  lastSavedInArguments: null
+};
+
+function getPrimaryInArguments(body) {
+  if (!body || typeof body !== 'object') {
+    return {};
+  }
+
+  const inArgumentsArray = Array.isArray(body.inArguments) ? body.inArguments : [];
+  const [firstInArguments] = inArgumentsArray;
+
+  if (firstInArguments && typeof firstInArguments === 'object' && !Array.isArray(firstInArguments)) {
+    return firstInArguments;
+  }
+
+  return {};
+}
+
 app.get('/', (req, res) => {
   return res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -68,103 +89,201 @@ app.get('/config.json', function (req, res) {
   return res.status(200).json(configJSON(req));
 });
 
-function acknowledgeLifecycleEvent(routeName) {
+function acknowledgeLifecycleEvent(routeName, options = {}) {
+  const { persistInArguments = false, statusOnInvoke } = options;
+
   return (req, res) => {
-    logger.info(`${routeName} lifecycle hook invoked.`, { correlationId: req.correlationId });
-    logger.debug(`${routeName} lifecycle payload received.`, {
-      correlationId: req.correlationId,
-      requestBody: req.body
+    const correlationId = req.correlationId;
+    const primaryInArguments = getPrimaryInArguments(req.body);
+    const inArgumentsPresent = Object.keys(primaryInArguments).length > 0;
+    const sanitizedBody = sanitizeObject(req.body || {});
+    const sanitizedArguments = sanitizeObject(primaryInArguments);
+
+    logger.info(`${routeName} lifecycle hook invoked.`, {
+      correlationId,
+      status: statusOnInvoke || 'received',
+      inArgumentsPresent
     });
+    logger.debug(`${routeName} lifecycle payload received.`, {
+      correlationId,
+      requestBody: sanitizedBody
+    });
+
+    if (persistInArguments && inArgumentsPresent) {
+      lifecycleState.lastSavedInArguments = primaryInArguments;
+      logger.info('save lifecycle inArguments persisted.', {
+        correlationId,
+        inArguments: sanitizedArguments
+      });
+    } else if (inArgumentsPresent) {
+      logger.debug(`${routeName} lifecycle inArguments snapshot.`, {
+        correlationId,
+        inArguments: sanitizedArguments
+      });
+    }
+
+    const messageCandidate =
+      primaryInArguments.messageText !== undefined
+        ? primaryInArguments.messageText
+        : primaryInArguments.message;
+    const messagePresent = normalizeString(messageCandidate) !== '';
+    const mobilePresent = normalizeString(primaryInArguments.mobilePhoneAttribute) !== '';
+
+    const missingFields = [];
+    if (!messagePresent) missingFields.push('message');
+    if (!mobilePresent) missingFields.push('mobilePhoneAttribute');
+
+    logger[missingFields.length > 0 ? 'warn' : 'info'](`${routeName} lifecycle validation snapshot.`, {
+      correlationId,
+      missingFields,
+      fieldsPresent: {
+        message: messagePresent,
+        mobilePhoneAttribute: mobilePresent
+      }
+    });
+
     try {
-      if (req.body && Array.isArray(req.body.inArguments) && req.body.inArguments.length > 0) {
+      if (inArgumentsPresent) {
         validateLifecycleRequest(req.body);
         logger.debug(`${routeName} lifecycle payload validated successfully.`, {
-          correlationId: req.correlationId
+          correlationId
         });
       }
     } catch (error) {
       if (error instanceof ValidationError) {
-        logger.warn(`${routeName} validation failed.`, { errors: error.details, correlationId: req.correlationId });
+        logger.warn(`${routeName} validation failed.`, {
+          errors: error.details,
+          correlationId
+        });
         return res.status(error.statusCode).json({
           status: 'invalid',
           message: error.message,
           details: error.details
         });
       }
-      logger.error(`${routeName} unexpected error.`, { message: error.message, correlationId: req.correlationId });
-      return res.status(500).json({ status: 'error', message: 'Unexpected error validating lifecycle request.' });
+      logger.error(`${routeName} unexpected error.`, {
+        message: error.message,
+        correlationId
+      });
+      return res.status(500).json({
+        status: 'error',
+        message: 'Unexpected error validating lifecycle request.'
+      });
     }
 
     return res.status(200).json({ status: 'ok' });
   };
 }
 
-app.post('/save', acknowledgeLifecycleEvent('save'));
-app.post('/publish', acknowledgeLifecycleEvent('publish'));
+app.post('/save', acknowledgeLifecycleEvent('save', { persistInArguments: true }));
+app.post(
+  '/publish',
+  acknowledgeLifecycleEvent('publish', {
+    statusOnInvoke: 'ready'
+  })
+);
 app.post('/validate', acknowledgeLifecycleEvent('validate'));
 app.post('/stop', acknowledgeLifecycleEvent('stop'));
 
 app.post('/executeV2', async (req, res) => {
   const correlationId = req.correlationId;
-  logger.info('executeV2 invoked.', { correlationId });
-  logger.debug('executeV2 request payload received.', {
+  const requestBody = req.body || {};
+  const inArgumentsArray = Array.isArray(requestBody.inArguments) ? requestBody.inArguments : [];
+  const primaryInArguments = getPrimaryInArguments(requestBody);
+  const sanitizedRequestBody = sanitizeObject(requestBody);
+  const sanitizedPrimaryArgs = sanitizeObject(primaryInArguments);
+
+  logger.info('executeV2 received.', {
     correlationId,
-    requestBody: req.body
+    inArgumentsPresent: inArgumentsArray.length > 0
+  });
+  logger.debug('executeV2.request.body', {
+    correlationId,
+    requestBody: sanitizedRequestBody
+  });
+  logger.debug('executeV2.inArguments', {
+    correlationId,
+    inArguments: sanitizedPrimaryArgs
+  });
+
+  const firstName =
+    primaryInArguments.firstNameAttribute !== undefined
+      ? primaryInArguments.firstNameAttribute
+      : primaryInArguments.firstName;
+  const mobileAttribute =
+    primaryInArguments.mobilePhoneAttribute !== undefined
+      ? primaryInArguments.mobilePhoneAttribute
+      : primaryInArguments.mobilePhone || primaryInArguments.recipientMobile;
+  const messageValue =
+    primaryInArguments.messageText !== undefined
+      ? primaryInArguments.messageText
+      : primaryInArguments.message;
+
+  logger.debug('executeV2.extract', {
+    correlationId,
+    extracted: {
+      firstName: sanitizeValue('firstName', firstName),
+      mobilePhone: sanitizeValue('mobilePhone', mobileAttribute),
+      message: sanitizeValue('message', messageValue)
+    }
+  });
+
+  const mappedValuesMobile =
+    primaryInArguments &&
+    typeof primaryInArguments.mappedValues === 'object' &&
+    primaryInArguments.mappedValues !== null
+      ? primaryInArguments.mappedValues.mobilePhone
+      : undefined;
+
+  const normalizedMessage = normalizeString(messageValue);
+  const normalizedMobile = normalizeString(
+    mappedValuesMobile !== undefined
+      ? mappedValuesMobile
+      : mobileAttribute || primaryInArguments.mobilePhone
+  );
+
+  const missingFields = [];
+  if (normalizedMessage === '') missingFields.push('message');
+  if (normalizedMobile === '') missingFields.push('mobilePhone');
+
+  logger[missingFields.length > 0 ? 'warn' : 'info']('executeV2.validate.snapshot', {
+    correlationId,
+    missingFields,
+    fieldsPresent: {
+      message: normalizedMessage !== '',
+      mobilePhone: normalizedMobile !== ''
+    }
   });
 
   try {
-    const validatedArgs = validateExecuteRequest(req.body);
-    logger.debug('executeV2 request payload validated.', {
+    const validatedArgs = validateExecuteRequest(requestBody);
+    logger.debug('executeV2.validation.result', {
       correlationId,
-      validationResult: {
+      validationResult: sanitizeObject({
         message: validatedArgs.message,
         recipientMobilePhone: validatedArgs.recipientMobilePhone,
         mappedValues: validatedArgs.mappedValues,
         rawArguments: validatedArgs.rawArguments
-      }
+      })
     });
+
     const providerPayload = buildDigoPayload(validatedArgs);
-    logger.debug('executeV2 resolved values.', {
+    logger.debug('executeV2.resolved.values', {
       correlationId,
       resolved: {
-        message: validatedArgs.message,
-        mobilePhone: providerPayload.message.recipient.address,
-        firstName:
-          validatedArgs.mappedValues && validatedArgs.mappedValues.firstName
-            ? validatedArgs.mappedValues.firstName
-            : validatedArgs.rawArguments.firstName || validatedArgs.rawArguments.firstNameAttribute
+        message: sanitizeValue('message', validatedArgs.message),
+        mobilePhone: sanitizeValue('mobilePhone', providerPayload.message.recipient.address),
+        firstName: sanitizeValue(
+          'firstName',
+          (validatedArgs.mappedValues && validatedArgs.mappedValues.firstName) ||
+            validatedArgs.rawArguments.firstName ||
+            validatedArgs.rawArguments.firstNameAttribute
+        )
       }
     });
-
-    const recipientPreview = { ...providerPayload.message.recipient };
-    if (recipientPreview.address) {
-      recipientPreview.address = '[REDACTED]';
-    }
-
-    const metaDataPreview = { ...providerPayload.metaData };
-    if (metaDataPreview.mappedValues) {
-      metaDataPreview.mappedValues = { ...metaDataPreview.mappedValues };
-      if (metaDataPreview.mappedValues.mobilePhone) {
-        metaDataPreview.mappedValues.mobilePhone = '[REDACTED]';
-      }
-    }
-
-    logger.debug('Prepared provider payload.', {
+    logger.debug('executeV2.provider.payload.built', {
       correlationId,
-      payloadPreview: {
-        message: {
-          channel: providerPayload.message.channel,
-          content: providerPayload.message.content,
-          recipient: recipientPreview
-        },
-        sender: providerPayload.sender,
-        metaData: metaDataPreview
-      }
-    });
-
-    logger.debug('executeV2 provider payload built.', {
-      correlationId,
-      payload: providerPayload
+      payload: sanitizeObject(providerPayload)
     });
 
     const providerResponse = await sendPayloadWithRetry(providerPayload, {
@@ -172,10 +291,10 @@ app.post('/executeV2', async (req, res) => {
       correlationId
     });
 
-    logger.info('executeV2 provider response received.', {
+    logger.info('executeV2.provider.response', {
       correlationId,
-      providerStatus: providerResponse.status,
-      providerResponse: providerResponse.data
+      status: providerResponse.status,
+      body: sanitizeObject(providerResponse.data)
     });
 
     return res.status(200).json({
@@ -196,7 +315,7 @@ app.post('/executeV2', async (req, res) => {
     if (error instanceof ProviderRequestError) {
       logger.error('executeV2 provider call failed.', {
         correlationId,
-        details: error.details
+        details: sanitizeObject(error.details)
       });
       const statusCode = error.statusCode && error.statusCode < 500 ? error.statusCode : 502;
       return res.status(statusCode).json({
