@@ -26,9 +26,8 @@ Handles outbound HTTP communication with the DIGO SMS provider, adding retry log
 * `axios` for HTTP requests (can be replaced via `options.httpClient`).
 * `./logger` for trace logging.
 * Environment variables read by `getConfig()`:
-  * `DIGO_API_URL` – Provider endpoint (default `https://engage-api.digo.link/notify`).
-  * `DIGO_X_AUTHORIZATION` – Optional header for API auth.
-  * `DIGO_BEARER_TOKEN` – Optional bearer token.
+  * `DIGO_API_URL` – Provider endpoint (default `https://sfmc.comsensetechnologies.com/api/message`).
+  * `COMSENSE_BASIC_AUTH` – Base64 `username:password` credential applied to the `Authorization` header.
   * `DIGO_HTTP_TIMEOUT_MS` – Request timeout in milliseconds (default `15000`).
   * `DIGO_RETRY_ATTEMPTS` – Number of retries (default `3`).
   * `DIGO_RETRY_BACKOFF_MS` – Initial backoff (default `500` ms, exponential).
