@@ -59,7 +59,7 @@ module.exports = function configJSON(req) {
       execute: {
         inArguments: [],
         outArguments: [],
-        timeout: 90000,
+        timeout: 10000,
         retryCount: 5,
         retryDelay: 1000,
         concurrentRequests: 5,
