@@ -54,9 +54,8 @@ X-Correlation-Id: 12345
   "inArguments": [
     {
       "message": "Welcome!",
-      "mobilePhone": "+12025550123",
       "firstNameAttribute": "{{Contact.Attribute.MyDE.FirstName}}",
-      "mobilePhoneAttribute": "{{Contact.Attribute.MyDE.MobilePhone}}"
+      "mobilePhoneAttribute": "{{Contact.Attribute.MyDE.mobile}}"
     }
   ]
 }

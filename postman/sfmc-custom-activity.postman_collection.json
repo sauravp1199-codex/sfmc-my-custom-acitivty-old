@@ -169,7 +169,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"inArguments\": [\n    {\n      \"message\": \"Thank you for your purchase!\",\n      \"mobilePhone\": \"+12025550123\",\n      \"firstNameAttribute\": \"{{Contact.Attribute.MyDE.FirstName}}\",\n      \"mobilePhoneAttribute\": \"{{Contact.Attribute.MyDE.MobilePhone}}\"\n    }\n  ],\n  \"outArguments\": [],\n  \"activityObjectID\": \"00000000-0000-0000-0000-000000000000\",\n  \"journeyId\": \"11111111-1111-1111-1111-111111111111\",\n  \"activityId\": \"22222222-2222-2222-2222-222222222222\",\n  \"definitionInstanceId\": \"33333333-3333-3333-3333-333333333333\",\n  \"activityInstanceId\": \"44444444-4444-4444-4444-444444444444\",\n  \"keyValue\": \"CONTACT_KEY\",\n  \"mode\": 0\n}"
+              "raw": "{\n  \"inArguments\": [\n    {\n      \"message\": \"Thank you for your purchase!\",\n      \"firstNameAttribute\": \"{{Contact.Attribute.MyDE.FirstName}}\",\n      \"mobilePhoneAttribute\": \"{{Contact.Attribute.MyDE.mobile}}\"\n    }\n  ]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/executeV2",
