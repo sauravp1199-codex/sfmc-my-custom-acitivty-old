@@ -14,12 +14,7 @@ const path = require('path');
 const configJSON = require('./config-json');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('./lib/logger');
-const {
-  ValidationError,
-  validateExecuteRequest,
-  validateLifecycleRequest,
-  normalizeString
-} = require('./lib/activity-validation');
+const { ValidationError, validateExecuteRequest, normalizeString } = require('./lib/activity-validation');
 const { buildDigoPayload } = require('./lib/digo-payload');
 const { sendPayloadWithRetry, ProviderRequestError } = require('./lib/digo-client');
 const { sanitizeObject, sanitizeValue } = require('./lib/log-sanitizer');
@@ -39,6 +34,8 @@ app.use(express.static(path.join(__dirname, 'dist')));
 app.use('/assets', express.static(designSystemAssetsPath));
 app.use('/images', express.static(path.join(__dirname, 'images')));
 
+let cachedActivityConfig = null;
+
 // Attach a correlation id for every request so that logs are traceable.
 app.use((req, res, next) => {
   const correlationId = req.headers['x-correlation-id'] || uuidv4();
@@ -46,10 +43,6 @@ app.use((req, res, next) => {
   res.set('X-Correlation-Id', correlationId);
   next();
 });
-
-const lifecycleState = {
-  lastSavedInArguments: null
-};
 
 function getPrimaryInArguments(body) {
   if (!body || typeof body !== 'object') {
@@ -64,6 +57,30 @@ function getPrimaryInArguments(body) {
   }
 
   return {};
+}
+
+function readLifecycleInArguments(body) {
+  if (!body || typeof body !== 'object') {
+    return { args: {}, present: false };
+  }
+
+  const inArgumentsArray =
+    body.arguments &&
+    body.arguments.execute &&
+    Array.isArray(body.arguments.execute.inArguments)
+      ? body.arguments.execute.inArguments
+      : [];
+
+  if (inArgumentsArray.length === 0) {
+    return { args: {}, present: false };
+  }
+
+  const [first] = inArgumentsArray;
+  if (first && typeof first === 'object' && !Array.isArray(first)) {
+    return { args: first, present: true };
+  }
+
+  return { args: {}, present: false };
 }
 
 app.get('/', (req, res) => {
@@ -89,101 +106,98 @@ app.get('/config.json', function (req, res) {
   return res.status(200).json(configJSON(req));
 });
 
-function acknowledgeLifecycleEvent(routeName, options = {}) {
-  const { persistInArguments = false, statusOnInvoke } = options;
+app.post('/save', (req, res) => {
+  const correlationId = req.correlationId;
+  const { args: inArguments, present } = readLifecycleInArguments(req.body);
+  const messageCandidate =
+    inArguments.messageText !== undefined ? inArguments.messageText : inArguments.message;
+  const normalizedMessage = normalizeString(messageCandidate);
+  const normalizedMobile = normalizeString(inArguments.mobilePhoneAttribute);
+  const missingFields = [];
+  if (normalizedMessage === '') missingFields.push('message');
+  if (normalizedMobile === '') missingFields.push('mobilePhoneAttribute');
 
-  return (req, res) => {
-    const correlationId = req.correlationId;
-    const primaryInArguments = getPrimaryInArguments(req.body);
-    const inArgumentsPresent = Object.keys(primaryInArguments).length > 0;
-    const sanitizedBody = sanitizeObject(req.body || {});
-    const sanitizedArguments = sanitizeObject(primaryInArguments);
-
-    logger.info(`${routeName} lifecycle hook invoked.`, {
-      correlationId,
-      status: statusOnInvoke || 'received',
-      inArgumentsPresent
-    });
-    logger.debug(`${routeName} lifecycle payload received.`, {
-      correlationId,
-      requestBody: sanitizedBody
-    });
-
-    if (persistInArguments && inArgumentsPresent) {
-      lifecycleState.lastSavedInArguments = primaryInArguments;
-      logger.info('save lifecycle inArguments persisted.', {
-        correlationId,
-        inArguments: sanitizedArguments
-      });
-    } else if (inArgumentsPresent) {
-      logger.debug(`${routeName} lifecycle inArguments snapshot.`, {
-        correlationId,
-        inArguments: sanitizedArguments
-      });
+  logger.info('save lifecycle hook invoked', {
+    correlationId,
+    status: 'received',
+    inArgumentsPresent: present,
+    fieldsPresent: {
+      message: normalizedMessage !== '',
+      mobilePhoneAttribute: normalizedMobile !== ''
     }
+  });
 
-    const messageCandidate =
-      primaryInArguments.messageText !== undefined
-        ? primaryInArguments.messageText
-        : primaryInArguments.message;
-    const messagePresent = normalizeString(messageCandidate) !== '';
-    const mobilePresent = normalizeString(primaryInArguments.mobilePhoneAttribute) !== '';
+  if (missingFields.length > 0) {
+    logger.warn('save validation snapshot', { correlationId, missingFields });
+    return res.status(400).json({ ok: false, missing: missingFields });
+  }
 
-    const missingFields = [];
-    if (!messagePresent) missingFields.push('message');
-    if (!mobilePresent) missingFields.push('mobilePhoneAttribute');
+  cachedActivityConfig = inArguments;
+  logger.info('save lifecycle config persisted', {
+    correlationId,
+    snapshot: sanitizeObject(inArguments)
+  });
 
-    logger[missingFields.length > 0 ? 'warn' : 'info'](`${routeName} lifecycle validation snapshot.`, {
-      correlationId,
-      missingFields,
-      fieldsPresent: {
-        message: messagePresent,
-        mobilePhoneAttribute: mobilePresent
-      }
-    });
+  return res.json({ ok: true });
+});
 
-    try {
-      if (inArgumentsPresent) {
-        validateLifecycleRequest(req.body);
-        logger.debug(`${routeName} lifecycle payload validated successfully.`, {
-          correlationId
-        });
-      }
-    } catch (error) {
-      if (error instanceof ValidationError) {
-        logger.warn(`${routeName} validation failed.`, {
-          errors: error.details,
-          correlationId
-        });
-        return res.status(error.statusCode).json({
-          status: 'invalid',
-          message: error.message,
-          details: error.details
-        });
-      }
-      logger.error(`${routeName} unexpected error.`, {
-        message: error.message,
-        correlationId
-      });
-      return res.status(500).json({
-        status: 'error',
-        message: 'Unexpected error validating lifecycle request.'
-      });
+app.post('/validate', (req, res) => {
+  const correlationId = req.correlationId;
+  const { args: inArguments, present } = readLifecycleInArguments(req.body);
+  const messageCandidate =
+    inArguments.messageText !== undefined ? inArguments.messageText : inArguments.message;
+  const normalizedMessage = normalizeString(messageCandidate);
+  const normalizedMobile = normalizeString(inArguments.mobilePhoneAttribute);
+  const missingFields = [];
+  if (normalizedMessage === '') missingFields.push('message');
+  if (normalizedMobile === '') missingFields.push('mobilePhoneAttribute');
+
+  logger.info('validate lifecycle hook invoked', {
+    correlationId,
+    status: 'received',
+    inArgumentsPresent: present,
+    fieldsPresent: {
+      message: normalizedMessage !== '',
+      mobilePhoneAttribute: normalizedMobile !== ''
     }
+  });
 
-    return res.status(200).json({ status: 'ok' });
-  };
-}
+  if (missingFields.length > 0) {
+    logger.warn('validate validation snapshot', { correlationId, missingFields });
+    return res.status(400).json({ ok: false, missing: missingFields });
+  }
 
-app.post('/save', acknowledgeLifecycleEvent('save', { persistInArguments: true }));
-app.post(
-  '/publish',
-  acknowledgeLifecycleEvent('publish', {
-    statusOnInvoke: 'ready'
-  })
-);
-app.post('/validate', acknowledgeLifecycleEvent('validate'));
-app.post('/stop', acknowledgeLifecycleEvent('stop'));
+  return res.json({ ok: true });
+});
+
+app.post('/publish', (req, res) => {
+  const correlationId = req.correlationId;
+  const persistedConfig = cachedActivityConfig || {};
+  const normalizedMessage = normalizeString(persistedConfig.message);
+  const normalizedMobile = normalizeString(persistedConfig.mobilePhoneAttribute);
+  const missingFields = [];
+  if (normalizedMessage === '') missingFields.push('message');
+  if (normalizedMobile === '') missingFields.push('mobilePhoneAttribute');
+
+  logger.info('publish lifecycle hook invoked', {
+    correlationId,
+    status: missingFields.length ? 'not_ready' : 'ready',
+    inArgumentsPresent: missingFields.length === 0
+  });
+
+  if (missingFields.length > 0) {
+    logger.warn('publish validation snapshot', { correlationId, missingFields });
+    return res.status(400).json({ ok: false, missing: missingFields });
+  }
+
+  return res.json({ ok: true });
+});
+
+app.post('/stop', (req, res) => {
+  const correlationId = req.correlationId;
+  logger.info('stop lifecycle hook invoked', { correlationId, status: 'received' });
+  return res.json({ ok: true });
+});
 
 app.post('/executeV2', async (req, res) => {
   const correlationId = req.correlationId;
@@ -193,7 +207,7 @@ app.post('/executeV2', async (req, res) => {
   const sanitizedRequestBody = sanitizeObject(requestBody);
   const sanitizedPrimaryArgs = sanitizeObject(primaryInArguments);
 
-  logger.info('executeV2 received.', {
+  logger.info('executeV2 received', {
     correlationId,
     inArgumentsPresent: inArgumentsArray.length > 0
   });
@@ -205,7 +219,6 @@ app.post('/executeV2', async (req, res) => {
     correlationId,
     inArguments: sanitizedPrimaryArgs
   });
-
   const firstName =
     primaryInArguments.firstNameAttribute !== undefined
       ? primaryInArguments.firstNameAttribute
@@ -218,15 +231,6 @@ app.post('/executeV2', async (req, res) => {
     primaryInArguments.messageText !== undefined
       ? primaryInArguments.messageText
       : primaryInArguments.message;
-
-  logger.debug('executeV2.extract', {
-    correlationId,
-    extracted: {
-      firstName: sanitizeValue('firstName', firstName),
-      mobilePhone: sanitizeValue('mobilePhone', mobileAttribute),
-      message: sanitizeValue('message', messageValue)
-    }
-  });
 
   const mappedValuesMobile =
     primaryInArguments &&
@@ -241,6 +245,15 @@ app.post('/executeV2', async (req, res) => {
       ? mappedValuesMobile
       : mobileAttribute || primaryInArguments.mobilePhone
   );
+
+  logger.debug('executeV2.extract', {
+    correlationId,
+    extracted: {
+      firstName: sanitizeValue('firstName', firstName),
+      mobilePhone: sanitizeValue('mobilePhone', mobileAttribute),
+      message: sanitizeValue('message', messageValue)
+    }
+  });
 
   const missingFields = [];
   if (normalizedMessage === '') missingFields.push('message');
