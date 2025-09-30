@@ -101,25 +101,12 @@ function onDoneButtonClick() {
   const mobilePhoneInput = document.getElementById('mobilePhoneAttribute')
 
   const message = messageInput ? messageInput.value.trim() : ''
-  const firstNameAttribute = firstNameInput ? firstNameInput.value : ''
-  const mobilePhoneAttribute = mobilePhoneInput ? mobilePhoneInput.value.trim() : ''
+  const firstNameAttribute = firstNameInput ? firstNameInput.value.trim() : ''
+  const mobilePhoneAttribute = mobilePhoneInput
+    ? mobilePhoneInput.value.trim()
+    : ''
 
   const activityFormHelpers = window.__activityForm || {}
-
-  if (!message) {
-    if (activityFormHelpers.showError) {
-      activityFormHelpers.showError('Message is required before the activity can be saved.')
-    }
-    return
-  }
-
-  if (!mobilePhoneAttribute) {
-    if (activityFormHelpers.showError) {
-      activityFormHelpers.showError('Mobile Phone Attribute is required before the activity can be saved.')
-    }
-    return
-  }
-
   if (activityFormHelpers.hideError) {
     activityFormHelpers.hideError()
   }
@@ -130,7 +117,8 @@ function onDoneButtonClick() {
       message: message || 'Thank you for your purchase!',
       firstNameAttribute:
         firstNameAttribute || '{{Contact.Attribute.KarixWPTest.FirstName}}',
-      mobilePhoneAttribute
+      mobilePhoneAttribute:
+        mobilePhoneAttribute || '{{Contact.Attribute.KarixWPTest.mobile}}'
     }
   ]
 
@@ -139,13 +127,14 @@ function onDoneButtonClick() {
   payload.arguments.execute = {
     ...existingExecute,
     inArguments,
-    timeout: 10000
+    timeout: Math.min(existingExecute.timeout || 10000, 10000)
   }
 
   payload.metaData = payload.metaData || {}
   payload.metaData.isConfigured = true
 
   activity = payload
+
 
   connection.trigger('updateActivity', payload)
   console.log(`Activity has been updated. Activity: ${JSON.stringify(payload)}`)

@@ -34,7 +34,8 @@ app.use(express.static(path.join(__dirname, 'dist')));
 app.use('/assets', express.static(designSystemAssetsPath));
 app.use('/images', express.static(path.join(__dirname, 'images')));
 
-const cache = new Map();
+
+let cachedActivityConfig = null;
 
 // Attach a correlation id for every request so that logs are traceable.
 app.use((req, res, next) => {
@@ -59,23 +60,29 @@ function getPrimaryInArguments(body) {
   return {};
 }
 
-function getLifecycleInArguments(body) {
+function readLifecycleInArguments(body) {
   if (!body || typeof body !== 'object') {
-    return {};
+    return { args: {}, present: false };
   }
 
-  const lifecycleArgs =
+  const inArgumentsArray =
     body.arguments &&
     body.arguments.execute &&
     Array.isArray(body.arguments.execute.inArguments)
-      ? body.arguments.execute.inArguments[0]
-      : undefined;
+      ? body.arguments.execute.inArguments
+      : [];
 
-  if (lifecycleArgs && typeof lifecycleArgs === 'object' && !Array.isArray(lifecycleArgs)) {
-    return lifecycleArgs;
+  if (inArgumentsArray.length === 0) {
+    return { args: {}, present: false };
   }
 
-  return {};
+  const [first] = inArgumentsArray;
+  if (first && typeof first === 'object' && !Array.isArray(first)) {
+    return { args: first, present: true };
+  }
+
+  return { args: {}, present: false };
+
 }
 
 app.get('/', (req, res) => {
@@ -103,11 +110,9 @@ app.get('/config.json', function (req, res) {
 
 app.post('/save', (req, res) => {
   const correlationId = req.correlationId;
-  const inArguments = getLifecycleInArguments(req.body);
-  const lifecycleArray = Array.isArray(req.body?.arguments?.execute?.inArguments)
-    ? req.body.arguments.execute.inArguments
-    : [];
-  const inArgumentsPresent = lifecycleArray.length > 0;
+
+  const { args: inArguments, present } = readLifecycleInArguments(req.body);
+
   const messageCandidate =
     inArguments.messageText !== undefined ? inArguments.messageText : inArguments.message;
   const normalizedMessage = normalizeString(messageCandidate);
@@ -119,7 +124,7 @@ app.post('/save', (req, res) => {
   logger.info('save lifecycle hook invoked', {
     correlationId,
     status: 'received',
-    inArgumentsPresent,
+    inArgumentsPresent: present,
     fieldsPresent: {
       message: normalizedMessage !== '',
       mobilePhoneAttribute: normalizedMobile !== ''
@@ -131,7 +136,7 @@ app.post('/save', (req, res) => {
     return res.status(400).json({ ok: false, missing: missingFields });
   }
 
-  cache.set('activityConfig', inArguments);
+  cachedActivityConfig = inArguments;
   logger.info('save lifecycle config persisted', {
     correlationId,
     snapshot: sanitizeObject(inArguments)
@@ -142,11 +147,8 @@ app.post('/save', (req, res) => {
 
 app.post('/validate', (req, res) => {
   const correlationId = req.correlationId;
-  const inArguments = getLifecycleInArguments(req.body);
-  const lifecycleArray = Array.isArray(req.body?.arguments?.execute?.inArguments)
-    ? req.body.arguments.execute.inArguments
-    : [];
-  const inArgumentsPresent = lifecycleArray.length > 0;
+  const { args: inArguments, present } = readLifecycleInArguments(req.body);
+
   const messageCandidate =
     inArguments.messageText !== undefined ? inArguments.messageText : inArguments.message;
   const normalizedMessage = normalizeString(messageCandidate);
@@ -158,7 +160,8 @@ app.post('/validate', (req, res) => {
   logger.info('validate lifecycle hook invoked', {
     correlationId,
     status: 'received',
-    inArgumentsPresent,
+    inArgumentsPresent: present,
+
     fieldsPresent: {
       message: normalizedMessage !== '',
       mobilePhoneAttribute: normalizedMobile !== ''
@@ -175,8 +178,13 @@ app.post('/validate', (req, res) => {
 
 app.post('/publish', (req, res) => {
   const correlationId = req.correlationId;
-  const cachedConfig = cache.get('activityConfig') || {};
-  const missingFields = ['message', 'mobilePhoneAttribute'].filter((field) => !cachedConfig[field]);
+  const persistedConfig = cachedActivityConfig || {};
+  const normalizedMessage = normalizeString(persistedConfig.message);
+  const normalizedMobile = normalizeString(persistedConfig.mobilePhoneAttribute);
+  const missingFields = [];
+  if (normalizedMessage === '') missingFields.push('message');
+  if (normalizedMobile === '') missingFields.push('mobilePhoneAttribute');
+
 
   logger.info('publish lifecycle hook invoked', {
     correlationId,
@@ -185,6 +193,7 @@ app.post('/publish', (req, res) => {
   });
 
   if (missingFields.length > 0) {
+    logger.warn('publish validation snapshot', { correlationId, missingFields });
     return res.status(400).json({ ok: false, missing: missingFields });
   }
 
@@ -217,21 +226,6 @@ app.post('/executeV2', async (req, res) => {
     correlationId,
     inArguments: sanitizedPrimaryArgs
   });
-  logger.debug('executeV2.extract', {
-    correlationId,
-    firstName: sanitizeValue('firstName', primaryInArguments.firstNameAttribute),
-    mobilePhone: sanitizeValue('mobilePhone', primaryInArguments.mobilePhoneAttribute),
-    messageExists: !!primaryInArguments.message
-  });
-
-  const lifecycleMissing = ['message', 'mobilePhoneAttribute'].filter(
-    (field) => !primaryInArguments[field]
-  );
-
-  if (lifecycleMissing.length > 0) {
-    logger.warn('executeV2.validate', { correlationId, missingFields: lifecycleMissing });
-    return res.status(400).json({ ok: false, missing: lifecycleMissing });
-  }
 
   const firstName =
     primaryInArguments.firstNameAttribute !== undefined
@@ -259,6 +253,15 @@ app.post('/executeV2', async (req, res) => {
       ? mappedValuesMobile
       : mobileAttribute || primaryInArguments.mobilePhone
   );
+
+  logger.debug('executeV2.extract', {
+    correlationId,
+    extracted: {
+      firstName: sanitizeValue('firstName', firstName),
+      mobilePhone: sanitizeValue('mobilePhone', mobileAttribute),
+      message: sanitizeValue('message', messageValue)
+    }
+  });
 
   const missingFields = [];
   if (normalizedMessage === '') missingFields.push('message');
