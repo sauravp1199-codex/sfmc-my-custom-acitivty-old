@@ -39,7 +39,7 @@ app.set('port', process.env.PORT || 3001);
 app.use(bodyParser.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'dist')));
 app.use('/assets', express.static(designSystemAssetsPath));
-app.use('/images', express.static(path.join(__dirname, 'images')));
+app.use('/images', express.static(path.join(__dirname, 'image')));
 
 // Attach a correlation id for every request so that logs are traceable.
 app.use((req, res, next) => {
