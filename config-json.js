@@ -8,33 +8,85 @@
 // *
 // ****************
 
+const { URL } = require('url');
+
+function sanitizeProtocol(value) {
+  if (!value || typeof value !== 'string') {
+    return '';
+  }
+
+  return value.split(',')[0].trim().replace(/:$/, '');
+}
+
+function pickFirstHeaderValue(req, headerName) {
+  if (!req || typeof req.get !== 'function') {
+    return '';
+  }
+
+  const headerValue = req.get(headerName);
+
+  if (!headerValue || typeof headerValue !== 'string') {
+    return '';
+  }
+
+  return headerValue.split(',')[0].trim();
+}
+
+function parseAbsoluteUrl(candidate) {
+  if (!candidate || typeof candidate !== 'string') {
+    return null;
+  }
+
+  try {
+    return new URL(candidate);
+  } catch (error) {
+    return null;
+  }
+}
+
 function resolveBaseUrl(req) {
   if (process.env.PUBLIC_BASE_URL) {
-    return process.env.PUBLIC_BASE_URL;
+    return process.env.PUBLIC_BASE_URL.replace(/\/?$/, '');
   }
 
   if (!req || typeof req.get !== 'function') {
     return '';
   }
 
-  const forwardedProto = req.get('x-forwarded-proto');
-  let protocol = forwardedProto ? forwardedProto.split(',')[0].trim() : '';
+  const forwardedProto = sanitizeProtocol(pickFirstHeaderValue(req, 'x-forwarded-proto'));
+  const forwardedHost = pickFirstHeaderValue(req, 'x-forwarded-host');
+  const forwardedPort = pickFirstHeaderValue(req, 'x-forwarded-port');
+  const directHost = pickFirstHeaderValue(req, 'host');
+  const reqProtocol = sanitizeProtocol(req.protocol);
 
-  if (!protocol && req.protocol) {
-    protocol = req.protocol;
+  let protocol = forwardedProto || reqProtocol || 'https';
+  let host = forwardedHost || directHost;
+
+  if (!host) {
+    const originUrl = parseAbsoluteUrl(pickFirstHeaderValue(req, 'origin'));
+    if (originUrl) {
+      protocol = originUrl.protocol.replace(/:$/, '') || protocol;
+      host = originUrl.host;
+    }
   }
 
-  if (!protocol) {
-    return '';
+  if (!host) {
+    const refererUrl = parseAbsoluteUrl(pickFirstHeaderValue(req, 'referer'));
+    if (refererUrl) {
+      protocol = refererUrl.protocol.replace(/:$/, '') || protocol;
+      host = refererUrl.host;
+    }
   }
-
-  const host = req.get('host');
 
   if (!host) {
     return '';
   }
 
-  return `${protocol}://${host}`;
+  if (forwardedPort && !host.includes(':')) {
+    host = `${host}:${forwardedPort}`;
+  }
+
+  return `${protocol}://${host}`.replace(/\/?$/, '');
 }
 
 function resolveApplicationExtensionId(req) {
