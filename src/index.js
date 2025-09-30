@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', function main() {
   // Journey Builder will respond with 'initActivity' after it receives the "ready" signal
   connection.on('initActivity', onInitActivity)
   connection.on('clickedNext', onDoneButtonClick)
+  connection.on('save', onSave)
 
   // We're all set! let's signal Journey Builder
   // that we're ready to receive the activity payload...
@@ -93,6 +94,10 @@ function prePopulateInput(inputFieldId, inputValue) {
   } else {
     inputField.value = inputValue
   }
+}
+
+function onSave() {
+  onDoneButtonClick()
 }
 
 function onDoneButtonClick() {
