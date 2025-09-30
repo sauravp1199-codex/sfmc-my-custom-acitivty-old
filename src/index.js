@@ -73,11 +73,16 @@ function onInitActivity(payload) {
   }
 
   const [firstInArgument = {}] = inArguments
-  const fieldsToPopulate = ['message', 'firstNameAttribute', 'mobilePhoneAttribute']
+  const fieldMappings = {
+    message: ['message', 'messageText'],
+    firstNameAttribute: ['FirstName', 'firstName', 'firstNameAttribute'],
+    mobilePhoneAttribute: ['mobile', 'mobilePhone', 'mobilePhoneAttribute']
+  }
 
-  fieldsToPopulate.forEach((field) => {
-    if (firstInArgument[field] !== undefined) {
-      prePopulateInput(field, firstInArgument[field])
+  Object.entries(fieldMappings).forEach(([field, keys]) => {
+    const matchedKey = keys.find((key) => firstInArgument[key] !== undefined)
+    if (matchedKey !== undefined) {
+      prePopulateInput(field, firstInArgument[matchedKey])
     }
   })
 }
@@ -101,7 +106,7 @@ function onDoneButtonClick() {
   const mobilePhoneInput = document.getElementById('mobilePhoneAttribute')
 
   const message = messageInput ? messageInput.value.trim() : ''
-  const firstNameAttribute = firstNameInput ? firstNameInput.value : ''
+  const firstNameAttribute = firstNameInput ? firstNameInput.value.trim() : ''
   const mobilePhoneAttribute = mobilePhoneInput ? mobilePhoneInput.value.trim() : ''
 
   const activityFormHelpers = window.__activityForm || {}
@@ -124,10 +129,49 @@ function onDoneButtonClick() {
     activityFormHelpers.hideError()
   }
 
+  const correlationArguments = (activity && activity.arguments) || {}
+  const executeArguments = correlationArguments.execute || {}
+
+  if (!activity.metaData) {
+    activity.metaData = {}
+  }
+
+  if (!activity.arguments) {
+    activity.arguments = {}
+  }
+
+  if (!activity.arguments.execute) {
+    activity.arguments.execute = {}
+  }
+
+  const contactKey = correlationArguments.contactKey || '{{Context.ContactKey}}'
+  const journeyId =
+    correlationArguments.definitionId ||
+    correlationArguments.journeyId ||
+    activity.metaData.journeyId ||
+    '{{Context.DefinitionId}}'
+  const activityId =
+    correlationArguments.activityId ||
+    executeArguments.key ||
+    activity.id ||
+    activity.key ||
+    '{{Activity.Id}}'
+
+  const inArgument = {
+    message,
+    messageText: message,
+    FirstName: firstNameAttribute,
+    firstNameAttribute,
+    mobile: mobilePhoneAttribute,
+    mobilePhone: mobilePhoneAttribute,
+    mobilePhoneAttribute,
+    contactKey,
+    journeyId,
+    activityId
+  }
+
   activity.metaData.isConfigured = true
-  activity.arguments.execute.inArguments = [
-    { message, firstNameAttribute, mobilePhoneAttribute }
-  ]
+  activity.arguments.execute.inArguments = [inArgument]
 
   connection.trigger('updateActivity', activity)
   console.log(`Activity has been updated. Activity: ${JSON.stringify(activity)}`)

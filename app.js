@@ -68,6 +68,30 @@ app.get('/config.json', function (req, res) {
   return res.status(200).json(configJSON(req));
 });
 
+function mergeInArgumentsFromRequest(body) {
+  if (!body || typeof body !== 'object') {
+    return {};
+  }
+
+  const directInArguments = Array.isArray(body.inArguments) ? body.inArguments : [];
+  const nestedInArguments =
+    body.arguments &&
+    body.arguments.execute &&
+    Array.isArray(body.arguments.execute.inArguments)
+      ? body.arguments.execute.inArguments
+      : [];
+
+  const source = directInArguments.length > 0 ? directInArguments : nestedInArguments;
+
+  return source.reduce((acc, current) => {
+    if (!current || typeof current !== 'object' || Array.isArray(current)) {
+      return acc;
+    }
+
+    return Object.assign(acc, current);
+  }, {});
+}
+
 function acknowledgeLifecycleEvent(routeName) {
   return (req, res) => {
     logger.info(`${routeName} lifecycle hook invoked.`, { correlationId: req.correlationId });
@@ -75,6 +99,18 @@ function acknowledgeLifecycleEvent(routeName) {
       correlationId: req.correlationId,
       requestBody: req.body
     });
+
+    if (routeName === 'save') {
+      const mergedInArguments = mergeInArgumentsFromRequest(req.body);
+      if (Object.keys(mergedInArguments).length > 0) {
+        logger.info('Save lifecycle received inArguments.', {
+          correlationId: req.correlationId,
+          inArgumentKeys: Object.keys(mergedInArguments)
+        });
+      } else {
+        logger.warn('Save lifecycle received without inArguments.', { correlationId: req.correlationId });
+      }
+    }
     try {
       const lifecycleArgs = req.body?.arguments?.execute;
 
@@ -200,8 +236,57 @@ app.post('/executeV2', async (req, res) => {
     requestBody: req.body
   });
 
+  const mergedInArguments = mergeInArgumentsFromRequest(req.body);
+  const expectedKeys = ['message', 'FirstName', 'mobile', 'contactKey'];
+  const normalizedPreview = {
+    message: mergedInArguments.messageText || mergedInArguments.message || '',
+    FirstName:
+      mergedInArguments.FirstName ||
+      mergedInArguments.firstName ||
+      mergedInArguments.firstNameAttribute ||
+      '',
+    mobile:
+      mergedInArguments.mobile ||
+      mergedInArguments.mobilePhone ||
+      mergedInArguments.mobilePhoneAttribute ||
+      '',
+    contactKey:
+      mergedInArguments.contactKey ||
+      mergedInArguments.ContactKey ||
+      mergedInArguments.contactId ||
+      ''
+  };
+
+  const missingInArgumentKeys = expectedKeys.filter((key) => {
+    const value = normalizedPreview[key] || '';
+    return typeof value !== 'string' ? false : value.trim() === '';
+  });
+
+  if (missingInArgumentKeys.length > 0) {
+    logger.warn('executeV2 missing expected inArguments.', {
+      correlationId,
+      missingInArgumentKeys
+    });
+  }
+
   try {
     const validatedArgs = validateExecuteRequest(req.body);
+    normalizedPreview.message = validatedArgs.message || normalizedPreview.message;
+    normalizedPreview.mobile = validatedArgs.recipientMobilePhone || normalizedPreview.mobile;
+    if (validatedArgs.mappedValues && validatedArgs.mappedValues.firstName) {
+      normalizedPreview.FirstName = validatedArgs.mappedValues.firstName;
+    }
+    if (validatedArgs.rawArguments && typeof validatedArgs.rawArguments === 'object') {
+      const rawArgs = validatedArgs.rawArguments;
+      if (rawArgs.FirstName || rawArgs.firstName || rawArgs.firstNameAttribute) {
+        normalizedPreview.FirstName =
+          rawArgs.FirstName || rawArgs.firstName || rawArgs.firstNameAttribute || normalizedPreview.FirstName;
+      }
+      if (rawArgs.contactKey || rawArgs.ContactKey || rawArgs.contactId) {
+        normalizedPreview.contactKey =
+          rawArgs.contactKey || rawArgs.ContactKey || rawArgs.contactId || normalizedPreview.contactKey;
+      }
+    }
     logger.debug('executeV2 request payload validated.', {
       correlationId,
       validationResult: {
@@ -297,6 +382,11 @@ app.post('/executeV2', async (req, res) => {
       correlationId,
       providerStatus: providerResponse.status,
       providerResponse: providerResponse.data
+    });
+
+    logger.info('executeV2 resolved inArguments.', {
+      correlationId,
+      resolvedInArguments: normalizedPreview
     });
 
     return res.status(200).json({
