@@ -37,10 +37,31 @@ function resolveBaseUrl(req) {
   return `${protocol}://${host}`;
 }
 
+function resolveApplicationExtensionId(req) {
+  const envValue = process.env.APPLICATION_EXTENSION_ID;
+  if (envValue) {
+    return envValue;
+  }
+
+  if (req && typeof req.get === 'function') {
+    const headerValue = req.get('x-application-extension-id');
+    if (headerValue && headerValue.trim()) {
+      return headerValue.trim();
+    }
+  }
+
+  const queryValue = req?.query?.applicationExtensionId;
+  if (typeof queryValue === 'string' && queryValue.trim()) {
+    return queryValue.trim();
+  }
+
+  return '';
+}
+
 module.exports = function configJSON(req) {
   const baseUrl = resolveBaseUrl(req);
   const iconUrl = `${baseUrl}/images/iconSmall.svg`;
-  const applicationExtensionId = process.env.APPLICATION_EXTENSION_ID;
+  const applicationExtensionId = resolveApplicationExtensionId(req);
 
   if (!applicationExtensionId) {
     throw new Error(
