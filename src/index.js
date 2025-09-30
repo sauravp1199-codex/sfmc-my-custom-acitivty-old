@@ -124,13 +124,31 @@ function onDoneButtonClick() {
     activityFormHelpers.hideError()
   }
 
-  activity.metaData.isConfigured = true
-  activity.arguments.execute.inArguments = [
-    { message, firstNameAttribute, mobilePhoneAttribute }
+  const payload = activity || {}
+  const inArguments = [
+    {
+      message: message || 'Thank you for your purchase!',
+      firstNameAttribute:
+        firstNameAttribute || '{{Contact.Attribute.KarixWPTest.FirstName}}',
+      mobilePhoneAttribute
+    }
   ]
 
-  connection.trigger('updateActivity', activity)
-  console.log(`Activity has been updated. Activity: ${JSON.stringify(activity)}`)
+  payload.arguments = payload.arguments || {}
+  const existingExecute = payload.arguments.execute || {}
+  payload.arguments.execute = {
+    ...existingExecute,
+    inArguments,
+    timeout: 10000
+  }
+
+  payload.metaData = payload.metaData || {}
+  payload.metaData.isConfigured = true
+
+  activity = payload
+
+  connection.trigger('updateActivity', payload)
+  console.log(`Activity has been updated. Activity: ${JSON.stringify(payload)}`)
 }
 
 function onCancelButtonClick() {
