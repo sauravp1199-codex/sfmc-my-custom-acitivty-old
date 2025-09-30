@@ -27,6 +27,7 @@ Generates the `config.json` payload consumed by SFMC Journey Builder when loadin
 3. `APPLICATION_EXTENSION_ID` populates the required `configurationArguments.applicationExtensionId` property so Journey Builder can link the activity to its installed package.
 4. Schema definitions describe expected Journey Builder inArguments (`message`, `firstNameAttribute`, `mobilePhoneAttribute`), informing Journey validation.
 
+
 ## Error Handling and Edge Cases
 
 * If `PUBLIC_BASE_URL` is absent and headers are missing, the function returns empty strings, resulting in relative URLs. Ensure hosting layers forward protocol/host headers correctly.
