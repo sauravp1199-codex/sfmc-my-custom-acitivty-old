@@ -228,6 +228,10 @@ app.post('/executeV2', async (req, res) => {
     }
 
     logger.info('executeV2 journey data inspection.', journeyDataLog);
+    logger.info('executeV2 data extension payload received.', {
+      correlationId,
+      dataExtensionPayload: validatedArgs.rawArguments
+    });
 
     const providerPayload = buildDigoPayload(validatedArgs);
     logger.debug('executeV2 resolved values.', {
