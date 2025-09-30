@@ -15,6 +15,7 @@ Centralizes validation logic for Journey Builder lifecycle and execute payloads.
 ## Key Parameters and Return Types
 
 * `validateExecuteRequest(body)` expects a Marketing Cloud execute payload object containing `inArguments`.
+  * Accepts either a literal `mobilePhone` value or the `mobilePhoneAttribute` fallback from Journey data bindings.
   * Returns an object `{ message, recipientMobilePhone, mappedValues, rawArguments }`.
   * Throws `ValidationError` with `details` array describing missing or invalid fields.
 * `validateLifecycleRequest(body)` expects lifecycle payloads containing configuration arguments.
@@ -30,7 +31,7 @@ Centralizes validation logic for Journey Builder lifecycle and execute payloads.
 
 1. `validateExecuteRequest` delegates to `parseInArguments` (internal) to ensure the payload contains an object inside `inArguments`.
 2. Lifecycle requests validate `message` and `mobilePhoneAttribute`, ensuring configuration completeness.
-3. Execute requests validate runtime `message` and `mobilePhone` values, normalize mapped attributes, and surface descriptive errors.
+3. Execute requests validate runtime `message` and resolve the recipient phone from `mobilePhone` or `mobilePhoneAttribute`, normalize mapped attributes, and surface descriptive errors.
 4. Aggregates validation errors and throws once so that API handlers can emit a single structured response.
 5. On success, the returned object contains normalized values alongside the raw input object for downstream use.
 
@@ -74,7 +75,7 @@ try {
 ## Troubleshooting
 
 * **Repeated validation failures** – Examine `error.details` returned from API responses; ensure Journey data bindings supply required fields.
-* **Missing mobile number** – Confirm the inspector UI maps the contact's mobile attribute or that the execute payload includes `mobilePhone`.
+* **Missing mobile number** – Confirm the inspector UI maps the contact's mobile attribute (`mobilePhoneAttribute`) or that the execute payload includes `mobilePhone`.
 * **Whitespace issues** – Use `normalizeString` in custom scripts when preparing Journey data to match server expectations.
 
 ## Glossary
