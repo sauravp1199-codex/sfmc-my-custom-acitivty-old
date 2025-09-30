@@ -127,6 +127,33 @@
           "response": []
         },
         {
+          "name": "Validate - missing mobilePhoneAttribute",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"arguments\": {\n    \"execute\": {\n      \"inArguments\": [\n        {\n          \"message\": \"Lifecycle validation regression test\"\n        }\n      ]\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "validate"
+              ]
+            },
+            "description": "Expect a 400 response with validation errors when mobilePhoneAttribute is missing from the lifecycle execute arguments."
+          },
+          "response": []
+        },
+        {
           "name": "Stop",
           "request": {
             "method": "POST",
