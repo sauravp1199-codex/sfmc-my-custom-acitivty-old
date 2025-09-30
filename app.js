@@ -107,6 +107,22 @@ function acknowledgeLifecycleEvent(routeName) {
           correlationId: req.correlationId,
           inArgumentKeys: Object.keys(mergedInArguments)
         });
+
+        const { masked: maskedInArguments, unresolvedFields } = inspectJourneyData(mergedInArguments);
+
+        if (Object.keys(maskedInArguments).length > 0) {
+          logger.info('Save lifecycle inArguments preview.', {
+            correlationId: req.correlationId,
+            inArgumentsPreview: maskedInArguments
+          });
+        }
+
+        if (Array.isArray(unresolvedFields) && unresolvedFields.length > 0) {
+          logger.warn('Save lifecycle unresolved journey data fields detected.', {
+            correlationId: req.correlationId,
+            unresolvedFields
+          });
+        }
       } else {
         logger.warn('Save lifecycle received without inArguments.', { correlationId: req.correlationId });
       }
