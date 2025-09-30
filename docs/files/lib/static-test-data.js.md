@@ -7,8 +7,8 @@ Utility module that injects deterministic fixture values into lifecycle and exec
 | Function | Description |
 | --- | --- |
 | `shouldUseStaticTestData(req)` | Evaluates headers, query parameters, body flags, or the `ENABLE_STATIC_TEST_DATA` environment variable to determine whether static fixtures should be merged. |
-| `applyLifecycleStaticTestData(req)` | Populates lifecycle payloads with default message and phone attributes before validation when static mode is enabled. |
-| `applyExecuteStaticTestData(req)` | Populates execute payloads (message, contact fields, mapped values) before validation when static mode is enabled. |
+| `applyLifecycleStaticTestData(req)` | Populates lifecycle payloads with default campaign, message body, and recipient values before validation when static mode is enabled. |
+| `applyExecuteStaticTestData(req)` | Populates execute payloads (campaign, message body, recipient, and optional media/button metadata) before validation when static mode is enabled. |
 | `STATIC_LIFECYCLE_ARGUMENTS` | Exported fixture map used for lifecycle requests. |
 | `STATIC_EXECUTE_ARGUMENTS` | Exported fixture map used for execute requests. |
 
@@ -22,7 +22,7 @@ Utility module that injects deterministic fixture values into lifecycle and exec
 ## Usage Tips
 
 * Enable the mode globally by exporting `ENABLE_STATIC_TEST_DATA=true` before starting the Express app, or toggle per-request with the header/body flag.
-* The fixture data is limited to basic contact details suitable for validation; it does not attempt to mimic full provider responses—combine it with `DIGO_STUB_MODE` to bypass outbound calls entirely during development.
+* The fixture data is limited to basic campaign and messaging details suitable for validation; it does not attempt to mimic full provider responses—combine it with `DIGO_STUB_MODE` to bypass outbound calls entirely during development.
 * Because the helpers only fill gaps, you can still supply explicit values in the request body to override specific fixture fields when testing edge cases.
 
 ## Related Files

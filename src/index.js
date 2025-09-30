@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function main() {
 })
 
 function registerInputListeners() {
-  const trackedFields = ['message', 'firstNameAttribute', 'mobilePhoneAttribute']
+  const trackedFields = ['campaignName', 'messageBody', 'recipientTo', 'mediaUrl', 'buttonLabel']
   trackedFields.forEach((fieldId) => {
     const input = document.getElementById(fieldId)
     if (input) {
@@ -74,9 +74,11 @@ function onInitActivity(payload) {
 
   const [firstInArgument = {}] = inArguments
   const fieldMappings = {
-    message: ['message', 'messageText'],
-    firstNameAttribute: ['FirstName', 'firstName', 'firstNameAttribute'],
-    mobilePhoneAttribute: ['mobile', 'mobilePhone', 'mobilePhoneAttribute']
+    campaignName: ['campaignName'],
+    messageBody: ['messageBody', 'message', 'messageText'],
+    recipientTo: ['recipientTo', 'mobilePhone', 'mobile'],
+    mediaUrl: ['mediaUrl'],
+    buttonLabel: ['buttonLabel']
   }
 
   Object.entries(fieldMappings).forEach(([field, keys]) => {
@@ -101,26 +103,37 @@ function prePopulateInput(inputFieldId, inputValue) {
 }
 
 function onDoneButtonClick() {
-  const messageInput = document.getElementById('message')
-  const firstNameInput = document.getElementById('firstNameAttribute')
-  const mobilePhoneInput = document.getElementById('mobilePhoneAttribute')
+  const campaignNameInput = document.getElementById('campaignName')
+  const messageBodyInput = document.getElementById('messageBody')
+  const recipientToInput = document.getElementById('recipientTo')
+  const mediaUrlInput = document.getElementById('mediaUrl')
+  const buttonLabelInput = document.getElementById('buttonLabel')
 
-  const message = messageInput ? messageInput.value.trim() : ''
-  const firstNameAttribute = firstNameInput ? firstNameInput.value.trim() : ''
-  const mobilePhoneAttribute = mobilePhoneInput ? mobilePhoneInput.value.trim() : ''
+  const campaignName = campaignNameInput ? campaignNameInput.value.trim() : ''
+  const messageBody = messageBodyInput ? messageBodyInput.value.trim() : ''
+  const recipientTo = recipientToInput ? recipientToInput.value.trim() : ''
+  const mediaUrl = mediaUrlInput ? mediaUrlInput.value.trim() : ''
+  const buttonLabel = buttonLabelInput ? buttonLabelInput.value.trim() : ''
 
   const activityFormHelpers = window.__activityForm || {}
 
-  if (!message) {
+  if (!campaignName) {
     if (activityFormHelpers.showError) {
-      activityFormHelpers.showError('Message is required before the activity can be saved.')
+      activityFormHelpers.showError('Campaign Name is required before the activity can be saved.')
     }
     return
   }
 
-  if (!mobilePhoneAttribute) {
+  if (!messageBody) {
     if (activityFormHelpers.showError) {
-      activityFormHelpers.showError('Mobile Phone Attribute is required before the activity can be saved.')
+      activityFormHelpers.showError('Message Body is required before the activity can be saved.')
+    }
+    return
+  }
+
+  if (!recipientTo) {
+    if (activityFormHelpers.showError) {
+      activityFormHelpers.showError('Recipient (To) is required before the activity can be saved.')
     }
     return
   }
@@ -156,18 +169,22 @@ function onDoneButtonClick() {
     activity.id ||
     activity.key ||
     '{{Activity.Id}}'
+  const definitionInstanceId =
+    correlationArguments.definitionInstanceId ||
+    activity.metaData.definitionInstanceId ||
+    '{{Context.DefinitionInstanceId}}'
 
   const inArgument = {
-    message,
-    messageText: message,
-    FirstName: firstNameAttribute,
-    firstNameAttribute,
-    mobile: mobilePhoneAttribute,
-    mobilePhone: mobilePhoneAttribute,
-    mobilePhoneAttribute,
+    campaignName,
+    messageBody,
+    recipientTo,
+    mediaUrl,
+    buttonLabel,
     contactKey,
+    keyValue: contactKey,
     journeyId,
-    activityId
+    activityId,
+    definitionInstanceId
   }
 
   activity.metaData.isConfigured = true
@@ -238,8 +255,11 @@ function setupExampleTestHarness() {
           inArguments: [
             // SAMPLE
             // {
-            //   message: 'Thanks for your purchase!',
-            //   mobilePhoneAttribute: '{{Contact.Attribute.MyDE.MobilePhone}}'
+            //   campaignName: 'Welcome Journey',
+            //   messageBody: 'Thanks for your purchase!',
+            //   recipientTo: '{{Contact.Attribute.MyDE.MobilePhone}}',
+            //   mediaUrl: 'https://example.com/promo.png',
+            //   buttonLabel: 'Shop Now'
             // }
           ],
           outArguments: []

@@ -6,7 +6,7 @@ Provides the user interface for configuring the Custom Activity inside the Journ
 ## Structure Overview
 
 * Includes Salesforce Lightning Design System (SLDS) stylesheets and Google Fonts.
-* Defines form inputs for all execute-time fields: `message`, `firstNameAttribute`, `mobilePhoneAttribute`.
+* Defines form inputs for all execute-time fields: `campaignName`, `messageBody`, `recipientTo`, `mediaUrl`, `buttonLabel`.
 * Embeds inline `<script>` to manage the error banner state and expose helper functions for tests.
 * Loads the compiled `main.js` bundle at the end to wire Postmonger interactions.
 
@@ -17,7 +17,7 @@ Provides the user interface for configuring the Custom Activity inside the Journ
 | `.hero-banner` image | Visual banner at top of inspector for branding. |
 | `.activity-wrapper` | Container card that holds the activity form using custom theming variables. |
 | Form fields | Styled inputs/selects aligned with SLDS conventions. Required fields display helper text or error styling. |
-| Attribute helper text | Reminds users to use the Journey Builder attribute picker to insert `{{Contact.Attribute.<DataExtensionName>.<FieldName>}}` tokens for the `firstNameAttribute` and `mobilePhoneAttribute` inputs. |
+| Attribute helper text | Reminds users to use the Journey Builder attribute picker to insert `{{Contact.Attribute.<DataExtensionName>.<FieldName>}}` tokens for the **Recipient (To)** input and optional personalization tokens elsewhere. |
 | Error banner (`#form-error-banner`) | Hidden by default; shown when client-side validation fails in the inline script. |
 | Inline IIFE | Defines `hideError`, `showError`, binds blur/input listeners, and exposes `window.__activityForm`. |
 | `<script src="main.js">` | Loads the bundled JavaScript generated from `src/index.js`. |
@@ -35,7 +35,7 @@ Provides the user interface for configuring the Custom Activity inside the Journ
 
 ## Error Handling and Edge Cases
 
-* Inline script shows an error message when specific validations fail (e.g., missing `message` or `mobilePhoneAttribute`).
+* Inline script shows an error message when specific validations fail (e.g., missing Campaign Name, Message Body, or Recipient). 
 * Helper gracefully handles document readiness states to avoid accessing DOM before load.
 
 ## Usage Example
@@ -44,7 +44,7 @@ The inline script exposes helpers for QA automation:
 
 ```js
 // From browser console or automated test
-window.__activityForm.showError('Message is required.');
+window.__activityForm.showError('Campaign Name is required.');
 window.__activityForm.hideError();
 ```
 
