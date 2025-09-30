@@ -63,7 +63,7 @@ module.exports = function configJSON(req) {
         retryCount: 5,
         retryDelay: 1000,
         concurrentRequests: 5,
-        url: `${baseUrl}/executeV2`,
+        url: `${baseUrl}/execute`,
         useJwt: true
       }
     },

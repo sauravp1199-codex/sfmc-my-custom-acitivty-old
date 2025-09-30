@@ -76,7 +76,7 @@ Resulting payload snippet:
 
 * Consumes validated input from `lib/activity-validation.js`.
 * Output is sent via `sendPayloadWithRetry` in `lib/digo-client.js`.
-* Called by `/executeV2` in `app.js`.
+* Called by `/execute` in `app.js`.
 
 ## Troubleshooting
 
