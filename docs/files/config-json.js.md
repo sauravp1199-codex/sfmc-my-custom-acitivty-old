@@ -18,7 +18,7 @@ Generates the `config.json` payload consumed by SFMC Journey Builder when loadin
 
 ## External Dependencies
 
-* Relies on process environment variables: `PUBLIC_BASE_URL` to override base URL detection and `APPLICATION_EXTENSION_ID` to satisfy Journey Builder validation. The extension identifier can also be supplied via the `x-application-extension-id` header or `applicationExtensionId` query string when the environment variable is not set (useful for local testing tools).
+* Relies on process environment variables: `PUBLIC_BASE_URL` to override base URL detection and `APPLICATION_EXTENSION_ID` to satisfy Journey Builder validation. The extension identifier can also be supplied via the `x-application-extension-id`, `x-application-key`, or `x-app-key` headers (Salesforce has used multiple variants historically) or via the `applicationExtensionId` query string when the environment variable is not set—useful for local testing tools.
 * References static assets stored under `/images`.
 
 ## Data Flow

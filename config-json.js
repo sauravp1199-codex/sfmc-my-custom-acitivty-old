@@ -44,9 +44,17 @@ function resolveApplicationExtensionId(req) {
   }
 
   if (req && typeof req.get === 'function') {
-    const headerValue = req.get('x-application-extension-id');
-    if (headerValue && headerValue.trim()) {
-      return headerValue.trim();
+    const headerCandidates = [
+      'x-application-extension-id',
+      'x-application-key',
+      'x-app-key'
+    ];
+
+    for (const headerName of headerCandidates) {
+      const headerValue = req.get(headerName);
+      if (headerValue && headerValue.trim()) {
+        return headerValue.trim();
+      }
     }
   }
 
