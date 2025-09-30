@@ -75,6 +75,7 @@ Use the inspector's attribute picker to map Data Extension values into the activ
 | Variable | Description |
 | --- | --- |
 | `PUBLIC_BASE_URL` | Fully qualified base URL used to generate config links (overrides proxy-derived host/protocol). |
+| `APPLICATION_EXTENSION_ID` | Journey Builder **Application Extension ID** generated when installing the Custom Activity package. Required for canvas validation. |
 | `PORT` | Express listen port (defaults to `3001`). |
 | `LOG_LEVEL` | Minimum log level (`debug`, `info`, `warn`, `error`). Defaults to `info`. |
 | `DIGO_API_URL` | Provider API endpoint. Must be configured for outbound requests. |
