@@ -182,10 +182,10 @@
       ]
     },
     {
-      "name": "Execution",
-      "item": [
-        {
-          "name": "ExecuteV2",
+        "name": "Execution",
+        "item": [
+          {
+            "name": "Execute",
           "request": {
             "method": "POST",
             "header": [
@@ -199,12 +199,12 @@
               "raw": "{\n  \"inArguments\": [\n    {\n      \"message\": \"Thank you for your purchase!\",\n      \"firstNameAttribute\": \"{{Contact.Attribute.MyDE.FirstName}}\",\n      \"mobilePhoneAttribute\": \"{{Contact.Attribute.MyDE.mobile}}\"\n    }\n  ]\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/executeV2",
+              "raw": "{{baseUrl}}/execute",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "executeV2"
+                "execute"
               ]
             }
           },

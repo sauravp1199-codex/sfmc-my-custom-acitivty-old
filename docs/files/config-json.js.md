@@ -17,14 +17,15 @@ Generates the `config.json` payload consumed by SFMC Journey Builder when loadin
 
 ## External Dependencies
 
-* Relies on process environment variables: `PUBLIC_BASE_URL` to override base URL detection.
+* Relies on process environment variables: `PUBLIC_BASE_URL` to override base URL detection and `APPLICATION_EXTENSION_ID` to satisfy Journey Builder validation.
 * References static assets stored under `/images`.
 
 ## Data Flow
 
 1. `resolveBaseUrl` inspects `PUBLIC_BASE_URL`, `x-forwarded-proto`, `req.protocol`, and `host` headers to infer deployment URL.
-2. The base URL seeds icon locations and webhook endpoints for lifecycle (`/save`, `/publish`, `/validate`, `/stop`) and execute (`/executeV2`).
-3. Schema definitions describe expected Journey Builder inArguments (`message`, `firstNameAttribute`, `mobilePhoneAttribute`), informing Journey validation.
+2. The base URL seeds icon locations and webhook endpoints for lifecycle (`/save`, `/publish`, `/validate`, `/stop`) and execute (`/execute`).
+3. `APPLICATION_EXTENSION_ID` populates the required `configurationArguments.applicationExtensionId` property so Journey Builder can link the activity to its installed package.
+4. Schema definitions describe expected Journey Builder inArguments (`message`, `firstNameAttribute`, `mobilePhoneAttribute`), informing Journey validation.
 
 ## Error Handling and Edge Cases
 

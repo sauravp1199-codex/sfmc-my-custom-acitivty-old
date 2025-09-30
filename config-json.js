@@ -40,6 +40,13 @@ function resolveBaseUrl(req) {
 module.exports = function configJSON(req) {
   const baseUrl = resolveBaseUrl(req);
   const iconUrl = `${baseUrl}/images/iconSmall.svg`;
+  const applicationExtensionId = process.env.APPLICATION_EXTENSION_ID;
+
+  if (!applicationExtensionId) {
+    throw new Error(
+      'Missing APPLICATION_EXTENSION_ID environment variable required for Journey Builder validation.'
+    );
+  }
 
   return {
     workflowApiVersion: '1.1',
@@ -63,11 +70,12 @@ module.exports = function configJSON(req) {
         retryCount: 5,
         retryDelay: 1000,
         concurrentRequests: 5,
-        url: `${baseUrl}/executeV2`,
+        url: `${baseUrl}/execute`,
         useJwt: true
       }
     },
     configurationArguments: {
+      applicationExtensionId,
       save: {
         url: `${baseUrl}/save`
       },

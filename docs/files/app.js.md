@@ -8,7 +8,7 @@ Server-side entry point that exposes the Express application used by the Salesfo
 | Function / Route | Description |
 | --- | --- |
 | `acknowledgeLifecycleEvent(routeName)` | Higher-order helper that generates Express handlers for Journey Builder lifecycle routes (`/save`, `/publish`, `/validate`, `/stop`). |
-| `app.post('/executeV2', handler)` | Main execution endpoint invoked by Journey Builder during contact processing. Validates input, builds a DIGO payload, and calls the provider API. |
+| `app.post('/execute', handler)` | Main execution endpoint invoked by Journey Builder during contact processing. Validates input, builds a DIGO payload, and calls the provider API. |
 | `app.get('/config.json', handler)` | Provides the dynamic Custom Activity configuration consumed by Journey Builder. |
 | Static asset routes (`/`, `/index.html`, `/main.js`, `/main.js.map`, `/assets`, `/images`) | Serve the client-side inspector UI and supporting assets. |
 | `app.get('/health')` | Lightweight health check used by deployment platforms. |
@@ -16,7 +16,7 @@ Server-side entry point that exposes the Express application used by the Salesfo
 ## Key Parameters and Return Types
 
 * Lifecycle handlers expect SFMC lifecycle payloads (`req.body`) that contain optional `inArguments`. Successful validations return `{ status: 'ok' }`; validation failures return `{ status: 'invalid', message, details }` with HTTP 400.
-* `/executeV2` expects a Marketing Cloud execute payload (`req.body`). After validation it returns `{ status: 'ok', providerStatus, providerResponse }` on success. Validation failures respond with HTTP 400, provider issues respond with HTTP 4xx/5xx plus `{ status: 'provider_error', message, details }`, and unexpected failures respond with HTTP 500 and `{ status: 'error', message }`.
+* `/execute` expects a Marketing Cloud execute payload (`req.body`). After validation it returns `{ status: 'ok', providerStatus, providerResponse }` on success. Validation failures respond with HTTP 400, provider issues respond with HTTP 4xx/5xx plus `{ status: 'provider_error', message, details }`, and unexpected failures respond with HTTP 500 and `{ status: 'error', message }`.
 
 ## External Dependencies
 
@@ -33,7 +33,7 @@ Server-side entry point that exposes the Express application used by the Salesfo
 
 1. Incoming HTTP requests receive a correlation ID (header `X-Correlation-Id`).
 2. Lifecycle requests are optionally validated and return acknowledgement JSON to Journey Builder.
-3. `/executeV2` validates incoming Journey execute payloads, builds the DIGO payload (including message content and mapped values), logs a debug preview, and forwards it to the DIGO API via `sendPayloadWithRetry`.
+3. `/execute` validates incoming Journey execute payloads, builds the DIGO payload (including message content and mapped values), logs a debug preview, and forwards it to the DIGO API via `sendPayloadWithRetry`.
 4. Provider responses (or errors) are mapped back to SFMC-compatible JSON responses.
 
 ## Error Handling and Edge Cases
@@ -46,7 +46,7 @@ Server-side entry point that exposes the Express application used by the Salesfo
 ## Usage Example
 
 ```
-POST /executeV2
+POST /execute
 Content-Type: application/json
 X-Correlation-Id: 12345
 

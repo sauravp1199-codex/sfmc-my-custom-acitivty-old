@@ -26,7 +26,7 @@ Handles outbound HTTP communication with the DIGO SMS provider, adding retry log
 * `axios` for HTTP requests (can be replaced via `options.httpClient`).
 * `./logger` for trace logging.
 * Environment variables read by `getConfig()`:
-  * `DIGO_API_URL` – Provider endpoint (default `https://sfmc.comsensetechnologies.com/api/message`).
+  * `DIGO_API_URL` – Provider endpoint. Must be set for outbound delivery.
   * `COMSENSE_BASIC_AUTH` – Base64 `username:password` credential applied to the `Authorization` header.
   * `DIGO_HTTP_TIMEOUT_MS` – Request timeout in milliseconds (default `15000`).
   * `DIGO_RETRY_ATTEMPTS` – Number of retries (default `3`).
@@ -67,7 +67,7 @@ try {
 
 ## Related Files
 
-* Called by `/executeV2` in `app.js` to deliver DIGO payloads.
+* Called by `/execute` in `app.js` to deliver DIGO payloads.
 * Consumes payloads built in `lib/digo-payload.js`.
 * Logging relies on `lib/logger.js`.
 
