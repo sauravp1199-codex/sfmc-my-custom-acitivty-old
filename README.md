@@ -70,6 +70,13 @@ Use the inspector's attribute picker to map Data Extension values into the activ
 * `npm test` – Placeholder script (update when automated tests are added).
 * Postman collection: `postman/sfmc-custom-activity.postman_collection.json` includes requests for every endpoint.
 
+### Static Test Data Mode
+
+Local testing outside of Journey Builder often lacks resolved journey attributes. Enable deterministic fixture values by setting
+`ENABLE_STATIC_TEST_DATA=true` (environment variable) or by sending the `X-Use-Static-Test-Data: true` header / `useStaticTestData`
+flag in the request body. When enabled, lifecycle (`/validate`, `/save`, `/publish`, `/stop`) and `/execute` requests receive
+default message, contact, and mapped values so validation succeeds without SFMC token resolution.
+
 ## Environment Variables
 
 | Variable | Description |
@@ -86,6 +93,7 @@ Use the inspector's attribute picker to map Data Extension values into the activ
 | `DIGO_DEFAULT_MSISDNS` | Comma-separated fallback MSISDN list when Journey data lacks recipients. |
 | `DIGO_ORIGINATOR` | SMS originator/sender ID (default `TACMPN`). |
 | `DIGO_STUB_MODE` | When set to `true`, skips outbound DIGO calls and returns stub responses (ideal for testing). |
+| `ENABLE_STATIC_TEST_DATA` | When `true`, injects static fixture values into lifecycle and execute requests for local testing. |
 
 ## Deployment Notes
 
@@ -121,6 +129,7 @@ Detailed documentation is available for every source file under `docs/files/`:
 * [`lib/activity-validation.js`](docs/files/lib/activity-validation.js.md)
 * [`lib/digo-payload.js`](docs/files/lib/digo-payload.js.md)
 * [`lib/digo-client.js`](docs/files/lib/digo-client.js.md)
+* [`lib/static-test-data.js`](docs/files/lib/static-test-data.js.md)
 * [`src/index.js`](docs/files/src/index.js.md)
 * [`index.html`](docs/files/index.html.md)
 * [`webpack.config.js`](docs/files/webpack.config.js.md)
