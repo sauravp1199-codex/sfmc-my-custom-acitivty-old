@@ -110,6 +110,88 @@ app.post('/publish', acknowledgeLifecycleEvent('publish'));
 app.post('/validate', acknowledgeLifecycleEvent('validate'));
 app.post('/stop', acknowledgeLifecycleEvent('stop'));
 
+function maskPhoneValue(value) {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  const trimmed = value.trim();
+  if (trimmed.length <= 4) {
+    return trimmed ? `***${trimmed.slice(-4)}` : '';
+  }
+  const visible = trimmed.slice(-4);
+  return `${'*'.repeat(trimmed.length - 4)}${visible}`;
+}
+
+function maskEmailValue(value) {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  const parts = value.split('@');
+  if (parts.length !== 2) {
+    return value;
+  }
+  const [local, domain] = parts;
+  if (local.length <= 1) {
+    return `*@${domain}`;
+  }
+  return `${local[0]}***@${domain}`;
+}
+
+function maskJourneyValue(key, value) {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  const lowerKey = key.toLowerCase();
+
+  if (lowerKey.includes('phone') || lowerKey.includes('msisdn')) {
+    return maskPhoneValue(value);
+  }
+
+  if (lowerKey.includes('email')) {
+    return maskEmailValue(value);
+  }
+
+  if (lowerKey.includes('contact')) {
+    return '[MASKED_CONTACT]';
+  }
+
+  return value;
+}
+
+function inspectJourneyData(rawArguments) {
+  if (!rawArguments || typeof rawArguments !== 'object' || Array.isArray(rawArguments)) {
+    return { masked: {}, unresolvedFields: [] };
+  }
+
+  const masked = {};
+  const unresolvedFields = [];
+
+  Object.entries(rawArguments).forEach(([key, value]) => {
+    if (typeof value !== 'string') {
+      masked[key] = value;
+      return;
+    }
+
+    const trimmed = value.trim();
+
+    if (trimmed === '') {
+      masked[key] = '';
+      return;
+    }
+
+    if (trimmed.startsWith('{{') && trimmed.endsWith('}}')) {
+      unresolvedFields.push(key);
+      masked[key] = '[UNRESOLVED_TOKEN]';
+      return;
+    }
+
+    masked[key] = maskJourneyValue(key, trimmed);
+  });
+
+  return { masked, unresolvedFields };
+}
+
 app.post('/executeV2', async (req, res) => {
   const correlationId = req.correlationId;
   logger.info('executeV2 invoked.', { correlationId });
@@ -129,6 +211,24 @@ app.post('/executeV2', async (req, res) => {
         rawArguments: validatedArgs.rawArguments
       }
     });
+
+    const { masked: rawArgumentsPreview, unresolvedFields } = inspectJourneyData(validatedArgs.rawArguments);
+    const { masked: mappedValuesPreview } = inspectJourneyData(validatedArgs.mappedValues);
+    const journeyDataLog = {
+      correlationId,
+      journeyData: rawArgumentsPreview
+    };
+
+    if (Object.keys(mappedValuesPreview).length > 0) {
+      journeyDataLog.mappedValues = mappedValuesPreview;
+    }
+
+    if (unresolvedFields.length > 0) {
+      journeyDataLog.unresolvedFields = unresolvedFields;
+    }
+
+    logger.info('executeV2 journey data inspection.', journeyDataLog);
+
     const providerPayload = buildDigoPayload(validatedArgs);
     logger.debug('executeV2 resolved values.', {
       correlationId,
