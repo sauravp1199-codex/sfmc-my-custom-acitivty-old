@@ -19,6 +19,10 @@ const {
   validateExecuteRequest,
   validateLifecycleRequest
 } = require('./lib/activity-validation');
+const {
+  applyLifecycleStaticTestData,
+  applyExecuteStaticTestData
+} = require('./lib/static-test-data');
 const { buildDigoPayload } = require('./lib/digo-payload');
 const { sendPayloadWithRetry, ProviderRequestError } = require('./lib/digo-client');
 
@@ -95,6 +99,14 @@ function mergeInArgumentsFromRequest(body) {
 function acknowledgeLifecycleEvent(routeName) {
   return (req, res) => {
     logger.info(`${routeName} lifecycle hook invoked.`, { correlationId: req.correlationId });
+
+    const staticDataApplied = applyLifecycleStaticTestData(req);
+    if (staticDataApplied) {
+      logger.debug(`${routeName} lifecycle static test data merged into request body.`, {
+        correlationId: req.correlationId
+      });
+    }
+
     logger.debug(`${routeName} lifecycle payload received.`, {
       correlationId: req.correlationId,
       requestBody: req.body
@@ -247,6 +259,12 @@ function inspectJourneyData(rawArguments) {
 app.post('/execute', async (req, res) => {
   const correlationId = req.correlationId;
   logger.info('execute invoked.', { correlationId });
+
+  const staticDataApplied = applyExecuteStaticTestData(req);
+  if (staticDataApplied) {
+    logger.debug('execute static test data merged into request body.', { correlationId });
+  }
+
   logger.debug('execute request payload received.', {
     correlationId,
     requestBody: req.body

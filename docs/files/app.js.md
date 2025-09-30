@@ -15,8 +15,8 @@ Server-side entry point that exposes the Express application used by the Salesfo
 
 ## Key Parameters and Return Types
 
-* Lifecycle handlers expect SFMC lifecycle payloads (`req.body`) that contain optional `inArguments`. Successful validations return `{ status: 'ok' }`; validation failures return `{ status: 'invalid', message, details }` with HTTP 400.
-* `/execute` expects a Marketing Cloud execute payload (`req.body`). After validation it returns `{ status: 'ok', providerStatus, providerResponse }` on success. Validation failures respond with HTTP 400, provider issues respond with HTTP 4xx/5xx plus `{ status: 'provider_error', message, details }`, and unexpected failures respond with HTTP 500 and `{ status: 'error', message }`.
+* Lifecycle handlers expect SFMC lifecycle payloads (`req.body`) that contain optional `inArguments`. Successful validations return `{ status: 'ok' }`; validation failures return `{ status: 'invalid', message, details }` with HTTP 400. When static test mode is enabled (environment variable `ENABLE_STATIC_TEST_DATA` or request flag `useStaticTestData`), deterministic fixture values are injected before validation so development requests can succeed without resolved Journey tokens.
+* `/execute` expects a Marketing Cloud execute payload (`req.body`). After validation it returns `{ status: 'ok', providerStatus, providerResponse }` on success. Validation failures respond with HTTP 400, provider issues respond with HTTP 4xx/5xx plus `{ status: 'provider_error', message, details }`, and unexpected failures respond with HTTP 500 and `{ status: 'error', message }`. Static test mode uses the same fixture mechanism to populate message, contact, and mapped values before validation runs.
 
 ## External Dependencies
 
@@ -28,6 +28,7 @@ Server-side entry point that exposes the Express application used by the Salesfo
 * `./lib/activity-validation` for request validation and error types.
 * `./lib/digo-payload` to assemble the provider request body.
 * `./lib/digo-client` to send payloads with retry logic.
+* `./lib/static-test-data` to optionally merge deterministic fixture values into requests during local testing.
 
 ## Data Flow
 
