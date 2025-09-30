@@ -137,7 +137,6 @@ function onCancelButtonClick() {
   // tell Journey Builder that this activity has no changes.
   // we won't be prompted to save changes when the inspector closes
   connection.trigger('setActivityDirtyState', false)
-
   // now request that Journey Builder closes the inspector/drawer
   connection.trigger('requestInspectorClose')
 }
