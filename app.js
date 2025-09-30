@@ -76,9 +76,15 @@ function acknowledgeLifecycleEvent(routeName) {
       requestBody: req.body
     });
     try {
-      if (req.body && Array.isArray(req.body.inArguments) && req.body.inArguments.length > 0) {
-        validateLifecycleRequest(req.body);
-        logger.debug(`${routeName} lifecycle payload validated successfully.`, {
+      const lifecycleArgs = req.body?.arguments?.execute;
+
+      if (
+        lifecycleArgs &&
+        Array.isArray(lifecycleArgs.inArguments) &&
+        lifecycleArgs.inArguments.length > 0
+      ) {
+        validateLifecycleRequest(lifecycleArgs);
+        logger.debug(`${routeName} lifecycle execute arguments validated successfully.`, {
           correlationId: req.correlationId
         });
       }
