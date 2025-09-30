@@ -169,9 +169,31 @@ function acknowledgeLifecycleEvent(routeName) {
   };
 }
 
+function acknowledgeLifecycleHealth(routeName) {
+  return (req, res) => {
+    logger.info(`${routeName} lifecycle health check invoked.`, { correlationId: req.correlationId });
+
+    return res.status(200).json({
+      status: 'ok',
+      message: `${routeName} endpoint is reachable. Use POST for lifecycle payloads.`
+    });
+  };
+}
+
+app.get('/save', acknowledgeLifecycleHealth('save'));
+app.head('/save', acknowledgeLifecycleHealth('save'));
 app.post('/save', acknowledgeLifecycleEvent('save'));
+
+app.get('/publish', acknowledgeLifecycleHealth('publish'));
+app.head('/publish', acknowledgeLifecycleHealth('publish'));
 app.post('/publish', acknowledgeLifecycleEvent('publish'));
+
+app.get('/validate', acknowledgeLifecycleHealth('validate'));
+app.head('/validate', acknowledgeLifecycleHealth('validate'));
 app.post('/validate', acknowledgeLifecycleEvent('validate'));
+
+app.get('/stop', acknowledgeLifecycleHealth('stop'));
+app.head('/stop', acknowledgeLifecycleHealth('stop'));
 app.post('/stop', acknowledgeLifecycleEvent('stop'));
 
 function maskPhoneValue(value) {
@@ -255,6 +277,24 @@ function inspectJourneyData(rawArguments) {
 
   return { masked, unresolvedFields };
 }
+
+app.get('/execute', (req, res) => {
+  logger.info('execute health check invoked.', { correlationId: req.correlationId });
+
+  return res.status(200).json({
+    status: 'ok',
+    message: 'execute endpoint is reachable. Use POST for activity execution.'
+  });
+});
+
+app.head('/execute', (req, res) => {
+  logger.info('execute health check (HEAD) invoked.', { correlationId: req.correlationId });
+
+  return res.status(200).json({
+    status: 'ok',
+    message: 'execute endpoint is reachable. Use POST for activity execution.'
+  });
+});
 
 app.post('/execute', async (req, res) => {
   const correlationId = req.correlationId;
