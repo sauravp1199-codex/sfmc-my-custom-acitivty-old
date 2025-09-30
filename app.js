@@ -34,6 +34,7 @@ app.use(express.static(path.join(__dirname, 'dist')));
 app.use('/assets', express.static(designSystemAssetsPath));
 app.use('/images', express.static(path.join(__dirname, 'images')));
 
+
 let cachedActivityConfig = null;
 
 // Attach a correlation id for every request so that logs are traceable.
@@ -81,6 +82,7 @@ function readLifecycleInArguments(body) {
   }
 
   return { args: {}, present: false };
+
 }
 
 app.get('/', (req, res) => {
@@ -108,7 +110,9 @@ app.get('/config.json', function (req, res) {
 
 app.post('/save', (req, res) => {
   const correlationId = req.correlationId;
+
   const { args: inArguments, present } = readLifecycleInArguments(req.body);
+
   const messageCandidate =
     inArguments.messageText !== undefined ? inArguments.messageText : inArguments.message;
   const normalizedMessage = normalizeString(messageCandidate);
@@ -144,6 +148,7 @@ app.post('/save', (req, res) => {
 app.post('/validate', (req, res) => {
   const correlationId = req.correlationId;
   const { args: inArguments, present } = readLifecycleInArguments(req.body);
+
   const messageCandidate =
     inArguments.messageText !== undefined ? inArguments.messageText : inArguments.message;
   const normalizedMessage = normalizeString(messageCandidate);
@@ -156,6 +161,7 @@ app.post('/validate', (req, res) => {
     correlationId,
     status: 'received',
     inArgumentsPresent: present,
+
     fieldsPresent: {
       message: normalizedMessage !== '',
       mobilePhoneAttribute: normalizedMobile !== ''
@@ -178,6 +184,7 @@ app.post('/publish', (req, res) => {
   const missingFields = [];
   if (normalizedMessage === '') missingFields.push('message');
   if (normalizedMobile === '') missingFields.push('mobilePhoneAttribute');
+
 
   logger.info('publish lifecycle hook invoked', {
     correlationId,
@@ -219,6 +226,7 @@ app.post('/executeV2', async (req, res) => {
     correlationId,
     inArguments: sanitizedPrimaryArgs
   });
+
   const firstName =
     primaryInArguments.firstNameAttribute !== undefined
       ? primaryInArguments.firstNameAttribute
@@ -257,14 +265,14 @@ app.post('/executeV2', async (req, res) => {
 
   const missingFields = [];
   if (normalizedMessage === '') missingFields.push('message');
-  if (normalizedMobile === '') missingFields.push('mobilePhone');
+  if (normalizedMobile === '') missingFields.push('mobilePhoneAttribute');
 
   logger[missingFields.length > 0 ? 'warn' : 'info']('executeV2.validate.snapshot', {
     correlationId,
     missingFields,
     fieldsPresent: {
       message: normalizedMessage !== '',
-      mobilePhone: normalizedMobile !== ''
+      mobilePhoneAttribute: normalizedMobile !== ''
     }
   });
 

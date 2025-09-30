@@ -135,6 +135,7 @@ function onDoneButtonClick() {
 
   activity = payload
 
+
   connection.trigger('updateActivity', payload)
   console.log(`Activity has been updated. Activity: ${JSON.stringify(payload)}`)
 }
