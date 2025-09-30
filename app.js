@@ -213,6 +213,17 @@ app.post('/executeV2', async (req, res) => {
     });
 
     const { masked: rawArgumentsPreview, unresolvedFields } = inspectJourneyData(validatedArgs.rawArguments);
+
+    if (unresolvedFields.length > 0) {
+      logger.warn('executeV2 unresolved journey data fields detected.', {
+        correlationId,
+        unresolvedFields
+      });
+      throw new ValidationError(
+        `Unresolved journey data fields detected: ${unresolvedFields.join(', ')}`,
+        unresolvedFields.map((field) => `Unresolved field: ${field}`)
+      );
+    }
     const { masked: mappedValuesPreview } = inspectJourneyData(validatedArgs.mappedValues);
     const journeyDataLog = {
       correlationId,
