@@ -1,14 +1,14 @@
 # `app.js`
 
 ## Role in the System
-Server-side entry point that exposes the Express application used by the Salesforce Marketing Cloud (SFMC) Custom Activity. It serves static assets, exposes Journey Builder lifecycle webhooks, validates Execute requests, and relays outbound SMS payloads to the DIGO provider.
+Server-side entry point that exposes the Express application used by the Salesforce Marketing Cloud (SFMC) Custom Activity. It serves static assets, exposes Journey Builder lifecycle webhooks, validates Execute requests, and relays outbound payloads to the Comsense Execute API.
 
 ## Public API
 
 | Function / Route | Description |
 | --- | --- |
 | `acknowledgeLifecycleEvent(routeName)` | Higher-order helper that generates Express handlers for Journey Builder lifecycle routes (`/save`, `/publish`, `/validate`, `/stop`). |
-| `app.post('/execute', handler)` | Main execution endpoint invoked by Journey Builder during contact processing. Validates input, builds a DIGO payload, and calls the provider API. |
+| `app.post('/execute', handler)` | Main execution endpoint invoked by Journey Builder during contact processing. Validates input, builds a Comsense payload, and calls the provider API. |
 | `app.get('/config.json', handler)` | Provides the dynamic Custom Activity configuration consumed by Journey Builder. |
 | Static asset routes (`/`, `/index.html`, `/main.js`, `/main.js.map`, `/assets`, `/images`) | Serve the client-side inspector UI and supporting assets. |
 | `app.get('/health')` | Lightweight health check used by deployment platforms. |
@@ -34,7 +34,7 @@ Server-side entry point that exposes the Express application used by the Salesfo
 
 1. Incoming HTTP requests receive a correlation ID (header `X-Correlation-Id`).
 2. Lifecycle requests are optionally validated and return acknowledgement JSON to Journey Builder.
-3. `/execute` validates incoming Journey execute payloads, builds the DIGO payload (including message content and mapped values), logs a debug preview, and forwards it to the DIGO API via `sendPayloadWithRetry`.
+3. `/execute` validates incoming Journey execute payloads, builds the Comsense payload (campaign, message body, recipient, and optional media metadata), logs a debug preview, and forwards it to the provider API via `sendPayloadWithRetry`.
 4. Provider responses (or errors) are mapped back to SFMC-compatible JSON responses.
 
 ## Error Handling and Edge Cases
@@ -52,11 +52,17 @@ Content-Type: application/json
 X-Correlation-Id: 12345
 
 {
+  "definitionInstanceId": "def-001",
+  "journeyId": "journey-001",
+  "activityId": "abcd1234",
+  "keyValue": "contact-key-001",
   "inArguments": [
     {
-      "message": "Welcome!",
-      "firstNameAttribute": "{{Contact.Attribute.MyDE.FirstName}}",
-      "mobilePhoneAttribute": "{{Contact.Attribute.MyDE.mobile}}"
+      "campaignName": "Adidas India – Welcome Offer",
+      "messageBody": "Hey there! Enjoy 60% off with code WELCOME60.",
+      "recipientTo": "{{Contact.Attribute.MyDE.Mobile}}",
+      "mediaUrl": "https://images.unsplash.com/photo-1549880338-65ddcdfd017b",
+      "buttonLabel": "Shop Now"
     }
   ]
 }
@@ -77,13 +83,13 @@ Successful response:
 * `config-json.js` defines the Custom Activity metadata returned by `/config.json`.
 * `lib/activity-validation.js` performs execute payload validation.
 * `lib/digo-payload.js` prepares the outbound provider body.
-* `lib/digo-client.js` performs the HTTP call to the DIGO API.
+* `lib/digo-client.js` performs the HTTP call to the Comsense Execute API.
 * `src/index.js` hosts the Journey Builder inspector UI that submits configuration data consumed by these endpoints.
 
 ## Troubleshooting
 
 * **Lifecycle calls returning `status: 'invalid'`** – Inspect application logs for `ValidationError` warnings with correlation IDs. Confirm the inspector UI populated required fields.
-* **Provider errors (`status: 'provider_error'`)** – Check outbound payload logs and verify DIGO credentials and network reachability. Examine DIGO API logs correlated via the returned `X-Correlation-Id`.
+* **Provider errors (`status: 'provider_error'`)** – Check outbound payload logs and verify credentials and network reachability for the Comsense Execute API. Examine provider logs correlated via the returned `X-Correlation-Id`.
 * **Static assets not loading** – Ensure the `dist/` bundle has been built (`npm run dev` or webpack) and that the deployment serves `/assets` and `/images`.
 
 Logs are emitted via `lib/logger.js`; review platform-specific log drains (Heroku, SFMC) filtering by correlation ID for full request traces.
@@ -94,4 +100,4 @@ Logs are emitted via `lib/logger.js`; review platform-specific log drains (Herok
 * **Custom Activity** – A Journey Builder extension invoked during a journey to perform bespoke logic.
 * **Execute Call** – Runtime request from Journey Builder when a contact reaches the activity.
 * **In Arguments** – Configuration payload provided by the journey, typically mapped from Data Extensions or contact attributes.
-* **DIGO** – External SMS provider receiving the activity payload.
+* **Comsense Execute API** – External service receiving the activity payload.

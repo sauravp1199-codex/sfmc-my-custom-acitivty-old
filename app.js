@@ -311,24 +311,29 @@ app.post('/execute', async (req, res) => {
   });
 
   const mergedInArguments = mergeInArgumentsFromRequest(req.body);
-  const expectedKeys = ['message', 'FirstName', 'mobile', 'contactKey'];
+  const expectedKeys = ['campaignName', 'messageBody', 'recipientTo'];
   const normalizedPreview = {
-    message: mergedInArguments.messageText || mergedInArguments.message || '',
-    FirstName:
-      mergedInArguments.FirstName ||
-      mergedInArguments.firstName ||
-      mergedInArguments.firstNameAttribute ||
+    campaignName: mergedInArguments.campaignName || '',
+    messageBody:
+      mergedInArguments.messageBody ||
+      mergedInArguments.messageText ||
+      mergedInArguments.message ||
       '',
-    mobile:
-      mergedInArguments.mobile ||
+    recipientTo:
+      mergedInArguments.recipientTo ||
       mergedInArguments.mobilePhone ||
+      mergedInArguments.mobile ||
       mergedInArguments.mobilePhoneAttribute ||
       '',
+    mediaUrl: mergedInArguments.mediaUrl || '',
+    buttonLabel: mergedInArguments.buttonLabel || '',
     contactKey:
       mergedInArguments.contactKey ||
       mergedInArguments.ContactKey ||
       mergedInArguments.contactId ||
-      ''
+      '',
+    journeyId: mergedInArguments.journeyId || mergedInArguments.definitionId || '',
+    activityId: mergedInArguments.activityId || ''
   };
 
   const missingInArgumentKeys = expectedKeys.filter((key) => {
@@ -345,28 +350,32 @@ app.post('/execute', async (req, res) => {
 
   try {
     const validatedArgs = validateExecuteRequest(req.body);
-    normalizedPreview.message = validatedArgs.message || normalizedPreview.message;
-    normalizedPreview.mobile = validatedArgs.recipientMobilePhone || normalizedPreview.mobile;
-    if (validatedArgs.mappedValues && validatedArgs.mappedValues.firstName) {
-      normalizedPreview.FirstName = validatedArgs.mappedValues.firstName;
-    }
+    normalizedPreview.campaignName = validatedArgs.campaignName || normalizedPreview.campaignName;
+    normalizedPreview.messageBody = validatedArgs.messageBody || normalizedPreview.messageBody;
+    normalizedPreview.recipientTo = validatedArgs.recipientTo || normalizedPreview.recipientTo;
+    normalizedPreview.mediaUrl = validatedArgs.mediaUrl || normalizedPreview.mediaUrl;
+    normalizedPreview.buttonLabel = validatedArgs.buttonLabel || normalizedPreview.buttonLabel;
     if (validatedArgs.rawArguments && typeof validatedArgs.rawArguments === 'object') {
       const rawArgs = validatedArgs.rawArguments;
-      if (rawArgs.FirstName || rawArgs.firstName || rawArgs.firstNameAttribute) {
-        normalizedPreview.FirstName =
-          rawArgs.FirstName || rawArgs.firstName || rawArgs.firstNameAttribute || normalizedPreview.FirstName;
-      }
       if (rawArgs.contactKey || rawArgs.ContactKey || rawArgs.contactId) {
         normalizedPreview.contactKey =
           rawArgs.contactKey || rawArgs.ContactKey || rawArgs.contactId || normalizedPreview.contactKey;
+      }
+      if (rawArgs.journeyId || rawArgs.definitionId) {
+        normalizedPreview.journeyId = rawArgs.journeyId || rawArgs.definitionId || normalizedPreview.journeyId;
+      }
+      if (rawArgs.activityId) {
+        normalizedPreview.activityId = rawArgs.activityId || normalizedPreview.activityId;
       }
     }
     logger.debug('execute request payload validated.', {
       correlationId,
       validationResult: {
-        message: validatedArgs.message,
-        recipientMobilePhone: validatedArgs.recipientMobilePhone,
-        mappedValues: validatedArgs.mappedValues,
+        campaignName: validatedArgs.campaignName,
+        messageBody: validatedArgs.messageBody,
+        recipientTo: validatedArgs.recipientTo,
+        mediaUrl: validatedArgs.mediaUrl,
+        buttonLabel: validatedArgs.buttonLabel,
         rawArguments: validatedArgs.rawArguments
       }
     });
@@ -383,15 +392,10 @@ app.post('/execute', async (req, res) => {
         unresolvedFields.map((field) => `Unresolved field: ${field}`)
       );
     }
-    const { masked: mappedValuesPreview } = inspectJourneyData(validatedArgs.mappedValues);
     const journeyDataLog = {
       correlationId,
       journeyData: rawArgumentsPreview
     };
-
-    if (Object.keys(mappedValuesPreview).length > 0) {
-      journeyDataLog.mappedValues = mappedValuesPreview;
-    }
 
     if (unresolvedFields.length > 0) {
       journeyDataLog.unresolvedFields = unresolvedFields;
@@ -403,43 +407,30 @@ app.post('/execute', async (req, res) => {
       dataExtensionPayload: validatedArgs.rawArguments
     });
 
-    const providerPayload = buildDigoPayload(validatedArgs);
+    const providerPayload = buildDigoPayload(validatedArgs, req.body);
     logger.debug('execute resolved values.', {
       correlationId,
       resolved: {
-        message: validatedArgs.message,
-        mobilePhone: providerPayload.message.recipient.address,
-        firstName:
-          validatedArgs.mappedValues && validatedArgs.mappedValues.firstName
-            ? validatedArgs.mappedValues.firstName
-            : validatedArgs.rawArguments.firstName || validatedArgs.rawArguments.firstNameAttribute
+        campaignName: validatedArgs.campaignName,
+        messageBody: validatedArgs.messageBody,
+        recipientTo: maskPhoneValue(validatedArgs.recipientTo),
+        mediaUrl: validatedArgs.mediaUrl || validatedArgs.rawArguments.mediaUrl,
+        buttonLabel: validatedArgs.buttonLabel || validatedArgs.rawArguments.buttonLabel
       }
     });
-
-    const recipientPreview = { ...providerPayload.message.recipient };
-    if (recipientPreview.address) {
-      recipientPreview.address = '[REDACTED]';
-    }
-
-    const metaDataPreview = { ...providerPayload.metaData };
-    if (metaDataPreview.mappedValues) {
-      metaDataPreview.mappedValues = { ...metaDataPreview.mappedValues };
-      if (metaDataPreview.mappedValues.mobilePhone) {
-        metaDataPreview.mappedValues.mobilePhone = '[REDACTED]';
-      }
-    }
+    const payloadPreview = {
+      ...providerPayload,
+      inArguments: providerPayload.inArguments.map((entry) => {
+        if (entry.recipientTo) {
+          return { recipientTo: maskPhoneValue(entry.recipientTo) };
+        }
+        return entry;
+      })
+    };
 
     logger.debug('Prepared provider payload.', {
       correlationId,
-      payloadPreview: {
-        message: {
-          channel: providerPayload.message.channel,
-          content: providerPayload.message.content,
-          recipient: recipientPreview
-        },
-        sender: providerPayload.sender,
-        metaData: metaDataPreview
-      }
+      payloadPreview
     });
 
     logger.debug('execute provider payload built.', {
@@ -458,9 +449,14 @@ app.post('/execute', async (req, res) => {
       providerResponse: providerResponse.data
     });
 
+    const resolvedPreviewLog = {
+      ...normalizedPreview,
+      recipientTo: maskPhoneValue(normalizedPreview.recipientTo)
+    };
+
     logger.info('execute resolved inArguments.', {
       correlationId,
-      resolvedInArguments: normalizedPreview
+      resolvedInArguments: resolvedPreviewLog
     });
 
     return res.status(200).json({

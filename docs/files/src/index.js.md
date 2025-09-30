@@ -21,8 +21,8 @@ While not exported as a module, the file defines key functions and event handler
 ## Key Parameters and Return Types
 
 * Postmonger callbacks receive `payload` objects representing the activity definition supplied by Journey Builder.
-* Form handlers read/write to DOM inputs (`message`, `firstNameAttribute`, `mobilePhoneAttribute`).
-* `onDoneButtonClick` constructs `inArguments` with the SMS configuration fields and surfaces validation errors through the inspector UI rather than return values.
+* Form handlers read/write to DOM inputs (`campaignName`, `messageBody`, `recipientTo`, `mediaUrl`, `buttonLabel`).
+* `onDoneButtonClick` constructs `inArguments` with the Comsense configuration fields and surfaces validation errors through the inspector UI rather than return values.
 
 ## External Dependencies
 
@@ -40,7 +40,7 @@ While not exported as a module, the file defines key functions and event handler
 
 ## Error Handling and Edge Cases
 
-* Client-side validation ensures `message` and `mobilePhoneAttribute` are present before saving and highlights errors in the DOM via the shared helper.
+* Client-side validation ensures `campaignName`, `messageBody`, and `recipientTo` are present before saving and highlights errors in the DOM via the shared helper.
 * Development harness logs interactions to the console for debugging.
 
 ## Usage Example

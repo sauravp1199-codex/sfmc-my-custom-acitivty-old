@@ -1,13 +1,13 @@
 # `lib/digo-client.js`
 
 ## Role in the System
-Handles outbound HTTP communication with the DIGO SMS provider, adding retry logic, configurable headers, and stub mode for testing.
+Handles outbound HTTP communication with the Comsense Execute API, adding retry logic, configurable headers, and stub mode for testing.
 
 ## Public API
 
 | Export | Description |
 | --- | --- |
-| `sendPayloadWithRetry(payload, options)` | Sends the payload to the DIGO API with exponential backoff and optional overrides. |
+| `sendPayloadWithRetry(payload, options)` | Sends the payload to the Comsense Execute API with exponential backoff and optional overrides. |
 | `ProviderRequestError` | Custom `Error` class thrown when the provider request fails or returns an unexpected status. |
 | `getConfig()` | Reads environment configuration used by the client (URL, credentials, retry settings). |
 
@@ -26,7 +26,7 @@ Handles outbound HTTP communication with the DIGO SMS provider, adding retry log
 * `axios` for HTTP requests (can be replaced via `options.httpClient`).
 * `./logger` for trace logging.
 * Environment variables read by `getConfig()`:
-  * `DIGO_API_URL` – Provider endpoint. Must be set for outbound delivery.
+  * `DIGO_API_URL` – Provider endpoint. Defaults to `https://sfmc.comsensetechnologies.com/modules/custom-activity/execute` when unset.
   * `COMSENSE_BASIC_AUTH` – Base64 `username:password` credential applied to the `Authorization` header.
   * `DIGO_HTTP_TIMEOUT_MS` – Request timeout in milliseconds (default `15000`).
   * `DIGO_RETRY_ATTEMPTS` – Number of retries (default `3`).
@@ -67,7 +67,7 @@ try {
 
 ## Related Files
 
-* Called by `/execute` in `app.js` to deliver DIGO payloads.
+* Called by `/execute` in `app.js` to deliver Comsense payloads.
 * Consumes payloads built in `lib/digo-payload.js`.
 * Logging relies on `lib/logger.js`.
 

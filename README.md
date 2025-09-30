@@ -1,6 +1,6 @@
-# SFMC DIGO SMS Custom Activity
+# SFMC Comsense Messaging Custom Activity
 
-A production-hardened Salesforce Marketing Cloud (SFMC) Journey Builder Custom Activity that collects Journey configuration values, validates execute payloads, and relays SMS requests to the DIGO provider with resilient logging and retry logic. The repository bundles both the Express-based middleware and the inspector UI rendered inside Journey Builder.
+A production-hardened Salesforce Marketing Cloud (SFMC) Journey Builder Custom Activity that collects Journey configuration values, validates execute payloads, and relays requests to the Comsense Execute API with resilient logging and retry logic. The repository bundles both the Express-based middleware and the inspector UI rendered inside Journey Builder.
 
 ## Architecture Overview
 
@@ -19,11 +19,11 @@ Express Server (app.js)
                 │
                 ├─► Activity Validation (lib/activity-validation.js)
                 │        │
-                │        └─► DIGO Payload Builder (lib/digo-payload.js)
+                │        └─► Comsense Payload Builder (lib/digo-payload.js)
                 │                │
-                │                └─► DIGO HTTP Client (lib/digo-client.js)
+                │                └─► Provider HTTP Client (lib/digo-client.js)
                 │                            │
-                │                            └─► External DIGO SMS API
+                │                            └─► External Comsense Execute API
                 │
                 └─► Structured Logging (lib/logger.js)
 ```
@@ -33,7 +33,7 @@ Express Server (app.js)
 1. Journey Builder loads `/config.json` to render the Custom Activity on the canvas.
 2. The inspector iframe loads `index.html` and the bundled `main.js`, which use Postmonger to exchange data with Journey Builder.
 3. When a contact hits the activity, Journey Builder sends a POST to `/execute`.
-4. The server validates payloads, constructs the DIGO request, retries transient failures, and returns status metadata to Journey Builder.
+4. The server validates payloads, constructs the Comsense Execute API request, retries transient failures, and returns status metadata to Journey Builder.
 
 ## Getting Started
 
@@ -63,7 +63,7 @@ The server listens on `http://localhost:3001` by default. For Journey Builder in
 
 ### Journey Data Binding Tokens
 
-Use the inspector's attribute picker to map Data Extension values into the activity. The **First Name Attribute** and **Mobile Phone Attribute** fields expect tokens in the `{{Contact.Attribute.<DataExtensionName>.<FieldName>}}` format (for example, `{{Contact.Attribute.SMSAudience.FirstName}}` and `{{Contact.Attribute.SMSAudience.mobile}}`). Journey Builder resolves the tokens at execution time, so do not wrap them in quotes or add additional braces.
+Use the inspector's attribute picker to map Data Extension values into the activity. The **Campaign Name** and **Message Body** fields accept plain text or personalization tokens. The **Recipient (To)** field must resolve to a phone number token in the `{{Contact.Attribute.<DataExtensionName>.<FieldName>}}` format (for example, `{{Contact.Attribute.SMSAudience.Mobile}}`). Optional **Media URL** and **Button Label** inputs can pull from data extension columns the same way. Journey Builder resolves the tokens at execution time, so do not wrap them in quotes or add additional braces.
 
 ### Testing and Tooling
 
@@ -85,14 +85,12 @@ default message, contact, and mapped values so validation succeeds without SFMC 
 | `APPLICATION_EXTENSION_ID` | Journey Builder **Application Extension ID** generated when installing the Custom Activity package. Required for canvas validation. May also be supplied via the `x-application-extension-id`, `x-application-key`, or `x-app-key` header (Salesforce varies by stack) or the `applicationExtensionId` query string on `/config.json` for local tooling. |
 | `PORT` | Express listen port (defaults to `3001`). |
 | `LOG_LEVEL` | Minimum log level (`debug`, `info`, `warn`, `error`). Defaults to `info`. |
-| `DIGO_API_URL` | Provider API endpoint. Must be configured for outbound requests. |
+| `DIGO_API_URL` | Comsense Execute API endpoint. Defaults to `https://sfmc.comsensetechnologies.com/modules/custom-activity/execute` when unset. |
 | `COMSENSE_BASIC_AUTH` | Base64-encoded `username:password` string used for HTTP Basic authentication. |
 | `DIGO_HTTP_TIMEOUT_MS` | HTTP timeout in milliseconds (default `15000`). |
 | `DIGO_RETRY_ATTEMPTS` | Maximum retry attempts on transient errors (default `3`). |
 | `DIGO_RETRY_BACKOFF_MS` | Initial backoff delay in ms (default `500`, doubles per retry). |
-| `DIGO_DEFAULT_MSISDNS` | Comma-separated fallback MSISDN list when Journey data lacks recipients. |
-| `DIGO_ORIGINATOR` | SMS originator/sender ID (default `TACMPN`). |
-| `DIGO_STUB_MODE` | When set to `true`, skips outbound DIGO calls and returns stub responses (ideal for testing). |
+| `DIGO_STUB_MODE` | When set to `true`, skips outbound provider calls and returns stub responses (ideal for testing). |
 | `ENABLE_STATIC_TEST_DATA` | When `true`, injects static fixture values into lifecycle and execute requests for local testing. |
 
 ## Deployment Notes
@@ -108,7 +106,7 @@ default message, contact, and mapped values so validation succeeds without SFMC 
 | Journey Builder inspector fails to load | Confirm `/config.json` responds with 200 and that `PUBLIC_BASE_URL` resolves correctly. Inspect browser console for Postmonger errors. |
 | `/execute` returns `status: 'invalid'` | Review the JSON response `details` array and ensure Journey data extensions map required fields. Logs include correlation IDs for tracing. |
 | Provider request failures | Validate provider credentials (e.g., `COMSENSE_BASIC_AUTH`) and network reachability. When `DIGO_STUB_MODE` is `true`, outbound calls are skipped. |
-| Missing SMS recipients | Provide `dataSet` in Journey mappings or configure `DIGO_DEFAULT_MSISDNS`. |
+| Missing SMS recipients | Confirm the **Recipient (To)** field maps to a resolved phone-number attribute in your Journey data extension. |
 | Logs not appearing | Check `LOG_LEVEL` and your hosting platform's log drain or console. |
 
 ## Glossary
