@@ -8,6 +8,7 @@ Generates the `config.json` payload consumed by SFMC Journey Builder when loadin
 | Function | Description |
 | --- | --- |
 | `resolveBaseUrl(req)` | Determines the fully qualified base URL used to assemble asset and webhook endpoints, favoring `PUBLIC_BASE_URL` before deriving from the incoming request. |
+| `resolveApplicationExtensionId(req)` | Resolves the Application Extension ID from the environment, headers, or query string. |
 | `module.exports = function configJSON(req)` | Builds and returns the Custom Activity configuration object expected by Journey Builder. |
 
 ## Key Parameters and Return Types
@@ -17,7 +18,7 @@ Generates the `config.json` payload consumed by SFMC Journey Builder when loadin
 
 ## External Dependencies
 
-* Relies on process environment variables: `PUBLIC_BASE_URL` to override base URL detection and `APPLICATION_EXTENSION_ID` to satisfy Journey Builder validation.
+* Relies on process environment variables: `PUBLIC_BASE_URL` to override base URL detection and `APPLICATION_EXTENSION_ID` to satisfy Journey Builder validation. The extension identifier can also be supplied via the `x-application-extension-id` header or `applicationExtensionId` query string when the environment variable is not set (useful for local testing tools).
 * References static assets stored under `/images`.
 
 ## Data Flow
