@@ -69,6 +69,7 @@ Use the inspector's attribute picker to map Data Extension values into the activ
 
 * `npm test` – Placeholder script (update when automated tests are added).
 * Postman collection: `postman/sfmc-custom-activity.postman_collection.json` includes requests for every endpoint.
+* Journey Builder **Test Journey** runs now receive a stubbed response directly from `/execute`, mirroring Salesforce's sample custom activity behaviour without calling external providers.
 
 ## Environment Variables
 

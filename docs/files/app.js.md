@@ -16,7 +16,7 @@ Server-side entry point that exposes the Express application used by the Salesfo
 ## Key Parameters and Return Types
 
 * Lifecycle handlers expect SFMC lifecycle payloads (`req.body`) that contain optional `inArguments`. Successful validations return `{ status: 'ok' }`; validation failures return `{ status: 'invalid', message, details }` with HTTP 400.
-* `/execute` expects a Marketing Cloud execute payload (`req.body`). After validation it returns `{ status: 'ok', providerStatus, providerResponse }` on success. Validation failures respond with HTTP 400, provider issues respond with HTTP 4xx/5xx plus `{ status: 'provider_error', message, details }`, and unexpected failures respond with HTTP 500 and `{ status: 'error', message }`.
+* `/execute` expects a Marketing Cloud execute payload (`req.body`). After validation it returns `{ status: 'ok', providerStatus, providerResponse }` on success. Validation failures respond with HTTP 400, provider issues respond with HTTP 4xx/5xx plus `{ status: 'provider_error', message, details }`, and unexpected failures respond with HTTP 500 and `{ status: 'error', message }`. When Journey Builder triggers a **test execution**, the handler now short-circuits after validation and returns `{ status: 'ok', testMode: true, preview, unresolvedFields }` without contacting the downstream provider.
 
 ## External Dependencies
 
@@ -38,7 +38,7 @@ Server-side entry point that exposes the Express application used by the Salesfo
 
 ## Error Handling and Edge Cases
 
-* Validation failures throw `ValidationError`, resulting in HTTP 400 responses with detailed messages for Journey Builder diagnostics.
+* Validation failures throw `ValidationError`, resulting in HTTP 400 responses with detailed messages for Journey Builder diagnostics. In test mode unresolved Journey tokens are logged and echoed in the response instead of raising a `ValidationError` so that Journey Builder's Test Journey feature receives immediate feedback.
 * Provider errors throw `ProviderRequestError`, and the handler converts them into HTTP 4xx/5xx responses with diagnostic details while masking unexpected issues with HTTP 502 or 500 statuses.
 * Unexpected exceptions are logged as errors and surfaced as HTTP 500 with a generic message.
 * Missing or malformed lifecycle payloads are safely acknowledged without crashing.
