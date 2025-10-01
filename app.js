@@ -96,6 +96,210 @@ function mergeInArgumentsFromRequest(body) {
   }, {});
 }
 
+function collectEntrySourceValues(body) {
+  const flattened = {};
+
+  if (!body || typeof body !== 'object') {
+    return flattened;
+  }
+
+  const entrySources = [];
+
+  if (body.entrySource !== undefined) {
+    entrySources.push(body.entrySource);
+  }
+
+  const executeEntrySource =
+    body.arguments &&
+    body.arguments.execute &&
+    body.arguments.execute.entrySource;
+
+  if (executeEntrySource !== undefined) {
+    entrySources.push(executeEntrySource);
+  }
+
+  const assignValue = (key, value) => {
+    if (typeof key !== 'string') {
+      return;
+    }
+
+    const trimmedKey = key.trim();
+    if (!trimmedKey) {
+      return;
+    }
+
+    flattened[trimmedKey] = value;
+  };
+
+  const resolveFieldValue = (field) => {
+    if (!field || typeof field !== 'object') {
+      return field;
+    }
+
+    if ('value' in field) {
+      const candidate = field.value;
+      if (
+        candidate === null ||
+        ['string', 'number', 'boolean'].includes(typeof candidate)
+      ) {
+        return candidate;
+      }
+    }
+
+    if ('Value' in field) {
+      const candidate = field.Value;
+      if (
+        candidate === null ||
+        ['string', 'number', 'boolean'].includes(typeof candidate)
+      ) {
+        return candidate;
+      }
+    }
+
+    if ('defaultValue' in field) {
+      const candidate = field.defaultValue;
+      if (
+        candidate === null ||
+        ['string', 'number', 'boolean'].includes(typeof candidate)
+      ) {
+        return candidate;
+      }
+    }
+
+    if ('stringValue' in field) {
+      const candidate = field.stringValue;
+      if (
+        candidate === null ||
+        ['string', 'number', 'boolean'].includes(typeof candidate)
+      ) {
+        return candidate;
+      }
+    }
+
+    if ('fieldValue' in field) {
+      const candidate = field.fieldValue;
+      if (
+        candidate === null ||
+        ['string', 'number', 'boolean'].includes(typeof candidate)
+      ) {
+        return candidate;
+      }
+    }
+
+    return undefined;
+  };
+
+  const processKeyValueObject = (obj) => {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+      return;
+    }
+
+    const candidateKey = obj.name || obj.key || obj.fieldName || obj.FieldName;
+
+    if (candidateKey) {
+      const resolvedValue = resolveFieldValue(obj);
+      if (resolvedValue !== undefined) {
+        assignValue(candidateKey, resolvedValue);
+        return;
+      }
+    }
+
+    Object.entries(obj).forEach(([key, value]) => {
+      if (
+        value === null ||
+        ['string', 'number', 'boolean'].includes(typeof value)
+      ) {
+        assignValue(key, value);
+      }
+    });
+  };
+
+  const processValueCollection = (collection) => {
+    if (!collection) {
+      return;
+    }
+
+    if (Array.isArray(collection)) {
+      collection.forEach((item) => {
+        if (!item) {
+          return;
+        }
+
+        if (typeof item === 'object' && !Array.isArray(item)) {
+          processKeyValueObject(item);
+          return;
+        }
+
+        if (typeof item === 'string') {
+          assignValue(item, item);
+        }
+      });
+      return;
+    }
+
+    if (typeof collection === 'object') {
+      Object.entries(collection).forEach(([key, value]) => {
+        if (
+          value === null ||
+          ['string', 'number', 'boolean'].includes(typeof value)
+        ) {
+          assignValue(key, value);
+          return;
+        }
+
+        if (typeof value === 'object') {
+          processKeyValueObject({ name: key, value });
+        }
+      });
+    }
+  };
+
+  const processEntrySource = (entrySource) => {
+    if (!entrySource) {
+      return;
+    }
+
+    if (Array.isArray(entrySource)) {
+      entrySource.forEach(processEntrySource);
+      return;
+    }
+
+    if (typeof entrySource !== 'object') {
+      return;
+    }
+
+    processValueCollection(entrySource.values);
+    processValueCollection(entrySource.fields);
+
+    if (entrySource.dataExtension) {
+      processEntrySource(entrySource.dataExtension);
+    }
+
+    const hasStructuredValues =
+      Object.prototype.hasOwnProperty.call(entrySource, 'values') ||
+      Object.prototype.hasOwnProperty.call(entrySource, 'fields');
+    const hasDataExtension = Object.prototype.hasOwnProperty.call(
+      entrySource,
+      'dataExtension'
+    );
+
+    if (!hasStructuredValues && !hasDataExtension) {
+      Object.entries(entrySource).forEach(([key, value]) => {
+        if (
+          value === null ||
+          ['string', 'number', 'boolean'].includes(typeof value)
+        ) {
+          assignValue(key, value);
+        }
+      });
+    }
+  };
+
+  entrySources.forEach(processEntrySource);
+
+  return flattened;
+}
+
 function getFirstInArgumentValue(body, keys) {
   if (!Array.isArray(keys)) {
     keys = [keys];
@@ -343,11 +547,21 @@ async function handleExecute(req, res) {
   }
 
   const mergedInArguments = mergeInArgumentsFromRequest(req.body);
+  const entrySourceValues = collectEntrySourceValues(req.body);
   const executionMode = detectExecutionMode(req.body);
   const isTestMode = executionMode === 'test';
 
   if (executionMode) {
     logger.info('execute execution mode resolved.', { correlationId, executionMode });
+  }
+
+  if (Object.keys(entrySourceValues).length > 0) {
+    const { masked: entrySourcePreview } = inspectJourneyData(entrySourceValues);
+    logger.info('execute entry source data resolved.', {
+      correlationId,
+      entrySourceKeys: Object.keys(entrySourceValues),
+      entrySourcePreview
+    });
   }
   const expectedKeys = ['message', 'FirstName', 'mobile', 'contactKey'];
   const normalizedPreview = {
@@ -368,6 +582,27 @@ async function handleExecute(req, res) {
       mergedInArguments.contactId ||
       ''
   };
+
+  Object.entries(entrySourceValues).forEach(([key, value]) => {
+    if (!Object.prototype.hasOwnProperty.call(normalizedPreview, key)) {
+      normalizedPreview[key] = value;
+      return;
+    }
+
+    const existingValue = normalizedPreview[key];
+    if (
+      existingValue === undefined ||
+      existingValue === null ||
+      (typeof existingValue === 'string' && existingValue.trim() === '')
+    ) {
+      normalizedPreview[key] = value;
+      return;
+    }
+
+    if (!expectedKeys.includes(key)) {
+      normalizedPreview[key] = value;
+    }
+  });
 
   const missingInArgumentKeys = expectedKeys.filter((key) => {
     const value = normalizedPreview[key] || '';
