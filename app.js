@@ -20,7 +20,7 @@ const {
   validateLifecycleRequest
 } = require('./lib/activity-validation');
 const { buildDigoPayload } = require('./lib/digo-payload');
-const { sendPayloadWithRetry, ProviderRequestError } = require('./lib/digo-client');
+const { sendPayloadWithRetry, ProviderRequestError, getConfig } = require('./lib/digo-client');
 
 const app = express();
 app.set('trust proxy', true);
@@ -244,8 +244,19 @@ function inspectJourneyData(rawArguments) {
   return { masked, unresolvedFields };
 }
 
-app.post('/executeV2', async (req, res) => {
+async function handleExecute(req, res) {
   const correlationId = req.correlationId;
+  const {
+    definitionInstanceId = null,
+    activityId = null,
+    journeyId = null,
+    keyValue = null
+  } = req.body || {};
+
+  logger.info('execute: start', {
+    correlationId,
+    keys: { definitionInstanceId, activityId, journeyId, keyValue }
+  });
   logger.info('executeV2 invoked.', { correlationId });
   logger.debug('executeV2 request payload received.', {
     correlationId,
@@ -287,6 +298,7 @@ app.post('/executeV2', async (req, res) => {
 
   try {
     const validatedArgs = validateExecuteRequest(req.body);
+    logger.info('execute: validation ok', { correlationId });
     normalizedPreview.message = validatedArgs.message || normalizedPreview.message;
     normalizedPreview.mobile = validatedArgs.recipientMobilePhone || normalizedPreview.mobile;
     if (validatedArgs.mappedValues && validatedArgs.mappedValues.firstName) {
@@ -389,9 +401,20 @@ app.post('/executeV2', async (req, res) => {
       payload: providerPayload
     });
 
+    const providerConfig = getConfig();
+    logger.info('execute: posting to DIGO', {
+      correlationId,
+      url: providerConfig.url
+    });
+
     const providerResponse = await sendPayloadWithRetry(providerPayload, {
       headers: { 'X-Correlation-Id': correlationId },
       correlationId
+    });
+
+    logger.info('execute: provider response', {
+      correlationId,
+      status: providerResponse.status
     });
 
     logger.info('executeV2 provider response received.', {
@@ -412,6 +435,7 @@ app.post('/executeV2', async (req, res) => {
     });
   } catch (error) {
     if (error instanceof ValidationError) {
+      logger.info('execute: validation failed', { correlationId });
       logger.warn('executeV2 validation failed.', { errors: error.details, correlationId });
       return res.status(error.statusCode).json({
         status: 'invalid',
@@ -421,6 +445,10 @@ app.post('/executeV2', async (req, res) => {
     }
 
     if (error instanceof ProviderRequestError) {
+      logger.info('execute: provider error', {
+        correlationId,
+        message: error.message
+      });
       logger.error('executeV2 provider call failed.', {
         correlationId,
         details: error.details
@@ -433,13 +461,17 @@ app.post('/executeV2', async (req, res) => {
       });
     }
 
+    logger.info('execute: unexpected error', { correlationId, message: error.message });
     logger.error('executeV2 unexpected error.', { correlationId, message: error.message });
     return res.status(500).json({
       status: 'error',
       message: 'Unexpected error executing activity.'
     });
   }
-});
+}
+
+app.post('/executeV2', handleExecute);
+app.post('/modules/custom-activity/execute', handleExecute);
 
 const PORT = process.env.PORT || 3001;
 app.get('/health', (req, res) => {
