@@ -67,7 +67,7 @@ try {
 
 ## Related Files
 
-* Called by `/executeV2` in `app.js` to deliver DIGO payloads.
+* Called by `/execute` in `app.js` to deliver DIGO payloads.
 * Consumes payloads built in `lib/digo-payload.js`.
 * Logging relies on `lib/logger.js`.
 
