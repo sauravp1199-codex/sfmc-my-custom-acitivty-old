@@ -173,6 +173,16 @@ function onDoneButtonClick() {
   activity.metaData.isConfigured = true
   activity.arguments.execute.inArguments = [inArgument]
 
+  // Some Journey Builder lifecycle requests (notably save/validate) expect
+  // inArguments at the root of the activity payload as well.  Providing the
+  // merged value here makes the configuration resilient if the platform falls
+  // back to activity.inArguments rather than the execute scope.  This also
+  // ensures our server side validators receive the configuration that the
+  // builder persisted, preventing "save lifecycle received without
+  // inArguments" warnings.
+  activity.inArguments = [inArgument]
+  activity.outArguments = activity.outArguments || []
+
   connection.trigger('updateActivity', activity)
   console.log(`Activity has been updated. Activity: ${JSON.stringify(activity)}`)
 }
