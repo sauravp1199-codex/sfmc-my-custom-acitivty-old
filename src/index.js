@@ -113,7 +113,7 @@ function onDoneButtonClick() {
 
   if (!message) {
     if (activityFormHelpers.showError) {
-      activityFormHelpers.showError('Message is required before the activity can be saved.')
+      activityFormHelpers.showError('Message is required before the activity can be saved..')
     }
     return
   }
