@@ -88,19 +88,19 @@ module.exports = function configJSON(req) {
             {
               message: {
                 dataType: 'Text',
-                isNullable: 'False',
+                isNullable: false,
                 direction: 'in',
                 access: 'visible'
               },
               firstNameAttribute: {
                 dataType: 'Text',
-                isNullable: 'True',
+                isNullable: true,
                 direction: 'in',
                 access: 'visible'
               },
               mobilePhoneAttribute: {
                 dataType: 'Text',
-                isNullable: 'False',
+                isNullable: false,
                 direction: 'in',
                 access: 'visible'
               }
