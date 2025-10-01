@@ -253,15 +253,18 @@ async function handleExecute(req, res) {
     keyValue = null
   } = req.body || {};
 
-  logger.info('execute: start', {
+  logger.info('execute endpoint invoked.', {
     correlationId,
     keys: { definitionInstanceId, activityId, journeyId, keyValue }
   });
-  logger.info('executeV2 invoked.', { correlationId });
-  logger.debug('executeV2 request payload received.', {
-    correlationId,
-    requestBody: req.body
-  });
+  if (req.body && typeof req.body === 'object') {
+    logger.info('execute request payload received.', {
+      correlationId,
+      topLevelKeys: Object.keys(req.body)
+    });
+  } else {
+    logger.info('execute request payload received with unexpected format.', { correlationId });
+  }
 
   const mergedInArguments = mergeInArgumentsFromRequest(req.body);
   const expectedKeys = ['message', 'FirstName', 'mobile', 'contactKey'];
@@ -290,7 +293,7 @@ async function handleExecute(req, res) {
   });
 
   if (missingInArgumentKeys.length > 0) {
-    logger.warn('executeV2 missing expected inArguments.', {
+    logger.warn('execute missing expected inArguments.', {
       correlationId,
       missingInArgumentKeys
     });
@@ -315,7 +318,7 @@ async function handleExecute(req, res) {
           rawArgs.contactKey || rawArgs.ContactKey || rawArgs.contactId || normalizedPreview.contactKey;
       }
     }
-    logger.debug('executeV2 request payload validated.', {
+    logger.debug('execute request payload validated.', {
       correlationId,
       validationResult: {
         message: validatedArgs.message,
@@ -328,7 +331,7 @@ async function handleExecute(req, res) {
     const { masked: rawArgumentsPreview, unresolvedFields } = inspectJourneyData(validatedArgs.rawArguments);
 
     if (unresolvedFields.length > 0) {
-      logger.warn('executeV2 unresolved journey data fields detected.', {
+      logger.warn('execute unresolved journey data fields detected.', {
         correlationId,
         unresolvedFields
       });
@@ -351,14 +354,14 @@ async function handleExecute(req, res) {
       journeyDataLog.unresolvedFields = unresolvedFields;
     }
 
-    logger.info('executeV2 journey data inspection.', journeyDataLog);
-    logger.info('executeV2 data extension payload received.', {
+    logger.info('execute journey data inspection.', journeyDataLog);
+    logger.info('execute data extension payload received.', {
       correlationId,
       dataExtensionPayload: validatedArgs.rawArguments
     });
 
     const providerPayload = buildDigoPayload(validatedArgs);
-    logger.debug('executeV2 resolved values.', {
+    logger.debug('execute resolved values.', {
       correlationId,
       resolved: {
         message: validatedArgs.message,
@@ -396,7 +399,7 @@ async function handleExecute(req, res) {
       }
     });
 
-    logger.debug('executeV2 provider payload built.', {
+    logger.debug('execute provider payload built.', {
       correlationId,
       payload: providerPayload
     });
@@ -417,13 +420,13 @@ async function handleExecute(req, res) {
       status: providerResponse.status
     });
 
-    logger.info('executeV2 provider response received.', {
+    logger.info('execute provider response received.', {
       correlationId,
       providerStatus: providerResponse.status,
       providerResponse: providerResponse.data
     });
 
-    logger.info('executeV2 resolved inArguments.', {
+    logger.info('execute resolved inArguments.', {
       correlationId,
       resolvedInArguments: normalizedPreview
     });
@@ -436,7 +439,7 @@ async function handleExecute(req, res) {
   } catch (error) {
     if (error instanceof ValidationError) {
       logger.info('execute: validation failed', { correlationId });
-      logger.warn('executeV2 validation failed.', { errors: error.details, correlationId });
+      logger.warn('execute validation failed.', { errors: error.details, correlationId });
       return res.status(error.statusCode).json({
         status: 'invalid',
         message: error.message,
@@ -449,7 +452,7 @@ async function handleExecute(req, res) {
         correlationId,
         message: error.message
       });
-      logger.error('executeV2 provider call failed.', {
+      logger.error('execute provider call failed.', {
         correlationId,
         details: error.details
       });
@@ -462,7 +465,7 @@ async function handleExecute(req, res) {
     }
 
     logger.info('execute: unexpected error', { correlationId, message: error.message });
-    logger.error('executeV2 unexpected error.', { correlationId, message: error.message });
+    logger.error('execute unexpected error.', { correlationId, message: error.message });
     return res.status(500).json({
       status: 'error',
       message: 'Unexpected error executing activity.'
@@ -470,7 +473,7 @@ async function handleExecute(req, res) {
   }
 }
 
-app.post('/executeV2', handleExecute);
+app.post('/execute', handleExecute);
 app.post('/modules/custom-activity/execute', handleExecute);
 
 const PORT = process.env.PORT || 3001;

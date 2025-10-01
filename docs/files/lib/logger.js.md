@@ -38,7 +38,7 @@ Provides a lightweight, leveled logging utility for both server routes and provi
 ```js
 const logger = require('./lib/logger');
 
-logger.info('executeV2 invoked', { correlationId: 'abc-123' });
+logger.info('execute endpoint invoked', { correlationId: 'abc-123' });
 logger.error('Provider call failed', { attempt: 2, status: 500 });
 ```
 

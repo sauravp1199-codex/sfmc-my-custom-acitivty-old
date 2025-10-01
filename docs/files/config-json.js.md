@@ -23,7 +23,7 @@ Generates the `config.json` payload consumed by SFMC Journey Builder when loadin
 ## Data Flow
 
 1. `resolveBaseUrl` inspects `PUBLIC_BASE_URL`, `x-forwarded-proto`, `req.protocol`, and `host` headers to infer deployment URL.
-2. The base URL seeds icon locations and webhook endpoints for lifecycle (`/save`, `/publish`, `/validate`, `/stop`) and execute (`/executeV2`).
+2. The base URL seeds icon locations and webhook endpoints for lifecycle (`/save`, `/publish`, `/validate`, `/stop`) and execute (`/execute`).
 3. Schema definitions describe expected Journey Builder inArguments (`message`, `firstNameAttribute`, `mobilePhoneAttribute`), informing Journey validation.
 
 ## Error Handling and Edge Cases
