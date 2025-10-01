@@ -68,9 +68,9 @@ app.get('/config.json', function (req, res) {
   return res.status(200).json(configJSON(req));
 });
 
-function mergeInArgumentsFromRequest(body) {
+function collectAllInArguments(body) {
   if (!body || typeof body !== 'object') {
-    return {};
+    return [];
   }
 
   const directInArguments = Array.isArray(body.inArguments) ? body.inArguments : [];
@@ -81,7 +81,11 @@ function mergeInArgumentsFromRequest(body) {
       ? body.arguments.execute.inArguments
       : [];
 
-  const source = directInArguments.length > 0 ? directInArguments : nestedInArguments;
+  return [...directInArguments, ...nestedInArguments];
+}
+
+function mergeInArgumentsFromRequest(body) {
+  const source = collectAllInArguments(body);
 
   return source.reduce((acc, current) => {
     if (!current || typeof current !== 'object' || Array.isArray(current)) {
@@ -90,6 +94,56 @@ function mergeInArgumentsFromRequest(body) {
 
     return Object.assign(acc, current);
   }, {});
+}
+
+function getFirstInArgumentValue(body, keys) {
+  if (!Array.isArray(keys)) {
+    keys = [keys];
+  }
+
+  const inArguments = collectAllInArguments(body);
+
+  for (const entry of inArguments) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      continue;
+    }
+
+    for (const key of keys) {
+      if (Object.prototype.hasOwnProperty.call(entry, key)) {
+        return entry[key];
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function detectExecutionMode(body) {
+  const candidates = [
+    body && body.mode,
+    body && body.executionMode,
+    body && body.journeyContext && body.journeyContext.mode,
+    body && body.journeyContext && body.journeyContext.executionMode,
+    body && body.context && body.context.mode,
+    body && body.context && body.context.executionMode,
+    body && body.arguments && body.arguments.executionMode,
+    body && body.arguments && body.arguments.execute && body.arguments.execute.mode,
+    body && body.arguments && body.arguments.execute && body.arguments.execute.executionMode,
+    getFirstInArgumentValue(body, ['executionMode', 'ExecutionMode'])
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate !== 'string') {
+      continue;
+    }
+
+    const normalized = candidate.trim().toLowerCase();
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  return null;
 }
 
 function acknowledgeLifecycleEvent(routeName) {
@@ -211,6 +265,28 @@ function maskJourneyValue(key, value) {
   return value;
 }
 
+function buildMaskedPreview(preview) {
+  if (!preview || typeof preview !== 'object' || Array.isArray(preview)) {
+    return {};
+  }
+
+  return Object.entries(preview).reduce((acc, [key, value]) => {
+    if (typeof value !== 'string') {
+      acc[key] = value;
+      return acc;
+    }
+
+    const trimmed = value.trim();
+    if (trimmed === '') {
+      acc[key] = '';
+      return acc;
+    }
+
+    acc[key] = maskJourneyValue(key, trimmed);
+    return acc;
+  }, {});
+}
+
 function inspectJourneyData(rawArguments) {
   if (!rawArguments || typeof rawArguments !== 'object' || Array.isArray(rawArguments)) {
     return { masked: {}, unresolvedFields: [] };
@@ -267,6 +343,12 @@ async function handleExecute(req, res) {
   }
 
   const mergedInArguments = mergeInArgumentsFromRequest(req.body);
+  const executionMode = detectExecutionMode(req.body);
+  const isTestMode = executionMode === 'test';
+
+  if (executionMode) {
+    logger.info('execute execution mode resolved.', { correlationId, executionMode });
+  }
   const expectedKeys = ['message', 'FirstName', 'mobile', 'contactKey'];
   const normalizedPreview = {
     message: mergedInArguments.messageText || mergedInArguments.message || '',
@@ -333,16 +415,21 @@ async function handleExecute(req, res) {
     if (unresolvedFields.length > 0) {
       logger.warn('execute unresolved journey data fields detected.', {
         correlationId,
-        unresolvedFields
+        executionMode,
+        unresolvedFields,
+        testMode: isTestMode
       });
-      throw new ValidationError(
-        `Unresolved journey data fields detected: ${unresolvedFields.join(', ')}`,
-        unresolvedFields.map((field) => `Unresolved field: ${field}`)
-      );
+      if (!isTestMode) {
+        throw new ValidationError(
+          `Unresolved journey data fields detected: ${unresolvedFields.join(', ')}`,
+          unresolvedFields.map((field) => `Unresolved field: ${field}`)
+        );
+      }
     }
     const { masked: mappedValuesPreview } = inspectJourneyData(validatedArgs.mappedValues);
     const journeyDataLog = {
       correlationId,
+      executionMode,
       journeyData: rawArgumentsPreview
     };
 
@@ -355,6 +442,25 @@ async function handleExecute(req, res) {
     }
 
     logger.info('execute journey data inspection.', journeyDataLog);
+    if (isTestMode) {
+      const maskedPreview = buildMaskedPreview(normalizedPreview);
+      const testResponse = {
+        status: 'ok',
+        testMode: true,
+        executionMode: executionMode || 'test',
+        preview: maskedPreview,
+        unresolvedFields
+      };
+
+      logger.info('execute test mode stub response prepared.', {
+        correlationId,
+        executionMode,
+        preview: maskedPreview,
+        unresolvedFields
+      });
+
+      return res.status(200).json(testResponse);
+    }
     logger.info('execute data extension payload received.', {
       correlationId,
       dataExtensionPayload: validatedArgs.rawArguments
